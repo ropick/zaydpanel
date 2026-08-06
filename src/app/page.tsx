@@ -210,7 +210,7 @@ function Navbar() {
               <Server className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <span className="text-lg sm:text-xl font-bold text-foreground">
-              Nusa<span className="text-emerald-500">Host</span>
+              pro99<span className="text-emerald-500">.my.id</span>
             </span>
           </a>
 
@@ -247,7 +247,7 @@ function Navbar() {
                       <Server className="w-5 h-5 text-white" />
                     </div>
                     <span className="font-bold text-foreground">
-                      Nusa<span className="text-emerald-500">Host</span>
+                      pro99<span className="text-emerald-500">.my.id</span>
                     </span>
                   </SheetTitle>
                 </SheetHeader>
@@ -430,7 +430,7 @@ function FeaturesSection() {
         >
           <motion.div variants={fadeUp} custom={0}>
             <Badge variant="outline" className="mb-4 px-4 py-1.5 text-emerald-400 border-emerald-500/30 bg-emerald-500/5">
-              Kenapa NusaHost?
+              Kenapa pro99.my.id?
             </Badge>
           </motion.div>
           <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground">
@@ -895,10 +895,10 @@ function ContactSection() {
                       <h3 className="font-semibold text-foreground">Email</h3>
                       <p className="text-sm text-muted-foreground mt-1">Untuk tiket support dan pertanyaan detail.</p>
                       <a
-                        href="mailto:support@nusahost.id"
+                        href="mailto:support@pro99.my.id"
                         className="inline-flex items-center gap-1.5 mt-3 text-sm text-emerald-500 hover:text-emerald-400 transition-colors"
                       >
-                        support@nusahost.id
+                        support@pro99.my.id
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                     </div>
@@ -1057,7 +1057,7 @@ function Footer() {
                 <Server className="w-5 h-5 text-white" />
               </div>
               <span className="text-lg font-bold text-foreground">
-                Nusa<span className="text-emerald-500">Host</span>
+                pro99<span className="text-emerald-500">.my.id</span>
               </span>
             </a>
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -1118,7 +1118,7 @@ function Footer() {
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} NusaHost. Semua hak dilindungi.
+            &copy; {new Date().getFullYear()} pro99.my.id. Semua hak dilindungi.
           </p>
           <div className="flex items-center gap-4">
             <a href="#" className="text-muted-foreground hover:text-emerald-500 transition-colors">

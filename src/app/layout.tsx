@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NusaHost - Shared Hosting Super Cepat & Terpercaya Indonesia",
+  title: "pro99.my.id - Shared Hosting Super Cepat & Terpercaya Indonesia",
   description:
     "Layanan shared hosting berkualitas tinggi dengan server Indonesia, support 24/7, SSL gratis, dan harga terjangkau mulai Rp 29.900/bulan. Cocok untuk website, blog, toko online, dan bisnis UMKM.",
   keywords: [
@@ -23,13 +23,13 @@ export const metadata: Metadata = {
     "hosting murah",
     "hosting cepat",
     "cPanel hosting",
-    "NusaHost",
+    "pro99.my.id",
     "hosting Jakarta",
     "hosting Singapore",
     "web hosting",
     "domain Indonesia",
   ],
-  authors: [{ name: "NusaHost" }],
+  authors: [{ name: "pro99.my.id" }],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
