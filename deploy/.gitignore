@@ -1,0 +1,6 @@
+.env
+db/custom.db
+*.log
+node_modules/
+.next/
+.git/

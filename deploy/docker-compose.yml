@@ -1,0 +1,54 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: nusahost-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/db/custom.db
+    volumes:
+      - app-data:/app/db
+    networks:
+      - nusahost-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: nusahost-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot-www:/var/www/certbot:ro
+      - certbot-etc:/etc/letsencrypt:ro
+      - certbot-var:/var/lib/letsencrypt
+    depends_on:
+      - app
+    networks:
+      - nusahost-net
+
+  certbot:
+    image: certbot/certbot
+    container_name: nusahost-certbot
+    volumes:
+      - certbot-www:/var/www/certbot
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 6h & wait $${!-}; certbot renew; done;'"
+    networks:
+      - nusahost-net
+
+volumes:
+  app-data:
+  certbot-www:
+  certbot-etc:
+  certbot-var:
+
+networks:
+  nusahost-net:
+    driver: bridge
