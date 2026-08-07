@@ -1,31 +1,28 @@
-# NusaHost - Shared Hosting Website
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix aaPanel connection reset on port 36977
 
-## Task Summary
-Built a complete shared hosting business landing page website called "NusaHost" using Next.js 16, TypeScript, Tailwind CSS 4, and shadcn/ui components.
+Work Log:
+- Diagnosed aaPanel connection reset issue via SSH
+- Found Docker nginx was NOT publishing port 36977 (only 80/443) while also having a 36977 server block proxying to 172.17.0.1:36977
+- Found aaPanel has its own builtin webserver (nginx binary) listening on 0.0.0.0:36977 on host network
+- Removed the 36977 server block from Docker nginx config (not needed)
+- Reloaded Docker nginx with new config
+- Found aaPanel was forcing HTTPS redirect (302 to https://) even though SSL cert was present
+- Investigated SSL configuration: aaPanel uses self-signed cert, webserver binary generates config from templates
+- Temporarily removed SSL cert files which caused 404 (webserver conf requires cert files to exist even for HTTP-only mode)
+- Restored SSL cert files and ssl.pl, regenerated webserver config
+- Error evolved to "login view did not return a valid response" for HEAD requests
+- Investigated deeply: common.py exists at /www/server/panel/class/common.py, panelSetup class exists, init() returns None
+- Root cause: curl tests with HEAD method or without User-Agent fail (spider detection), but browser GET with User-Agent gets HTTP 200 with full login page
+- aaPanel is working correctly - the issue was only with curl-based testing, not actual browser access
 
-## Features Implemented
+Stage Summary:
+- aaPanel is accessible at https://168.110.210.148:36977/613ccb60/ (HTTP 200, 181KB login page)
+- Docker nginx config cleaned up (removed 36977 proxy block)
+- Landing page still works on port 80 via Docker nginx
+- aaPanel uses self-signed SSL cert - users need to accept certificate warning in browser
+- Credentials: username=ib0xgxtd, password=(via `sudo bt default`)
 
-### Sections
-1. **Navbar** - Responsive with mobile hamburger menu (Sheet), logo, navigation links, and CTA button
-2. **Hero Section** - Animated gradient background, promotional badge, headline, dual CTA buttons, trust badges
-3. **Stats Section** - 4 stat counters (2,500+ websites, 99.9% uptime, 1,800+ customers, 24/7 support)
-4. **Features Section** - 8 feature cards with icons (Server, Security, LiteSpeed, Uptime, Server Location, Support, Backup, SSL)
-5. **Pricing Section** - 3 packages (Starter Rp29.9K, Business Rp69.9K, Premium Rp149.9K) with feature lists and order modal
-6. **FAQ Section** - 7 accordion items covering common hosting questions
-7. **Contact Section** - WhatsApp, Email, Server Location, Payment Methods info cards + contact form
-8. **Footer** - Brand info, 3 link columns (Layanan, Perusahaan, Legal), social media icons
-
-### Backend
-- Prisma schema with HostingOrder and ContactMessage models
-- POST /api/order - Creates hosting orders with Zod validation
-- POST /api/contact - Creates contact messages with Zod validation
-- SQLite database for data persistence
-
-### Design
-- Dark theme with emerald/teal accent colors
-- Framer Motion animations (fade-up, stagger, scroll-triggered)
-- Fully responsive (mobile-first design)
-- Professional hosting company aesthetic
-
-## Tech Stack
-- Next.js 16 (App Router), TypeScript, Tailwind CSS 4, shadcn/ui, Framer Motion, Prisma (SQLite), Zod
+---
