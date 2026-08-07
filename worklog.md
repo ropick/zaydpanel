@@ -26,3 +26,29 @@ Stage Summary:
 - Credentials: username=ib0xgxtd, password=(via `sudo bt default`)
 
 ---
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Fix aaPanel loading issue on panel.pro99.my.id
+
+Work Log:
+- Investigated aaPanel login page stuck on "loading"
+- Found /etc/hosts blocks for aapanel.com/bt.cn causing connection issues
+- Found login_qrcode endpoint (wxapp) causing 10s timeout
+- Found userLang endpoint causing 125s timeout due to cache check + language loading
+- Found /public endpoint using wxapp/wxapp_v2 modules that hang on proxy requests
+- Removed hosts file blocks (aapanel.com, bt.cn, node.aapanel.com etc.)
+- Patched __init__.py v1 routes: login_qrcode/is_scan_ok/set_login → fast returns
+- Patched __init__.py v2 routes: login_qrcode/is_scan_ok/set_login → fast returns
+- Patched userLang cache check to skip proxy IP validation
+- Updated Docker nginx config with short timeouts (5s/15s/15s)
+- Reloaded Docker nginx
+
+Stage Summary:
+- Page HTML loads successfully (HTTP 200, 181KB, 0.12s via Docker nginx)
+- /code endpoint works (captcha image)
+- /userLang returns 200 in ~10s (async, non-blocking)
+- /public?login_qrcode returns 200 in ~5s (async, non-blocking)
+- Login form should now be visible in browser
+- All patches applied to /www/server/panel/BTPanel/__init__.py (backup at .bak)
