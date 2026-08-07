@@ -1,48 +1,37 @@
 import paramiko
 import sys
 
-VPS_IP = "168.110.210.148"
-VPS_USER = "opc"
-KEY_PATH = "/home/z/my-project/deploy/nusahost_id"
+key_path = '/home/z/my-project/deploy/nusahost_id'
+host = '168.110.210.148'
+
+# Try with password auth disabled, various key formats
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
 try:
-    # Read key bytes
-    with open(KEY_PATH, 'r') as f:
-        key_data = f.read()
-
-    # Load as Ed25519 from string
-    key = paramiko.RSAKey.from_private_key_file(KEY_PATH)
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    print(f"Connecting to {VPS_USER}@{VPS_IP}...")
-    client.connect(VPS_IP, username=VPS_USER, pkey=key, timeout=15)
-    print("CONNECTED OK!\n")
-
-    commands = [
-        "whoami",
-        "hostname",
-        "uname -m",
-        "cat /etc/os-release | head -4",
-        "df -h / | tail -1",
-        "free -h | head -2",
-        "nproc",
-    ]
-
-    for cmd in commands:
-        stdin, stdout, stderr = client.exec_command(cmd, timeout=10)
-        out = stdout.read().decode().strip()
-        err = stderr.read().decode().strip()
-        if out:
-            print(f"  {cmd:45s} => {out}")
-        if err:
-            print(f"  {cmd:45s} ERR => {err}")
-
+    # Try loading key with explicit passphrase=None
+    key = paramiko.RSAKey.from_private_key_file(key_path, password=None)
+    print(f"Key loaded: {key.get_name()} {key.get_bits()} bits")
+    
+    client.connect(host, username='root', pkey=key, timeout=15, banner_timeout=15, auth_timeout=15)
+    print("Connected!")
+    
+    # Quick test
+    stdin, stdout, stderr = client.exec_command('whoami && hostname', timeout=10)
+    print(stdout.read().decode().strip())
     client.close()
-    print("\nSSH connection test PASSED!")
-
+except paramiko.AuthenticationException as e:
+    print(f"Auth failed: {e}")
+    # Try with different username
+    for user in ['oracle', 'opc']:
+        try:
+            client.connect(host, username=user, pkey=key, timeout=15, banner_timeout=15)
+            print(f"Connected as {user}!")
+            stdin, stdout, stderr = client.exec_command('whoami && hostname', timeout=10)
+            print(stdout.read().decode().strip())
+            client.close()
+            break
+        except Exception as e2:
+            print(f"Failed as {user}: {e2}")
 except Exception as e:
-    print(f"CONNECTION FAILED: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
+    print(f"Error: {type(e).__name__}: {e}")

@@ -1,48 +1,44 @@
-#!/usr/bin/env python3
-"""Check aaPanel installation progress and status"""
-import paramiko, time
+import paramiko
 
-def connect():
-    key = paramiko.RSAKey.from_private_key_file("/home/z/my-project/deploy/nusahost_id")
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect("168.110.210.148", username="opc", pkey=key, timeout=15)
-    return client
+key_path = '/home/z/my-project/deploy/nusahost_id'
+host = '168.110.210.148'
 
-def run(client, cmd, timeout=30):
-    stdin, stdout, stderr = client.exec_command(cmd, timeout=timeout)
-    out = stdout.read().decode().strip()
-    code = stdout.channel.recv_exit_status()
-    return out, code
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-client = connect()
+key = paramiko.RSAKey.from_private_key_file(key_path, password=None)
 
-# Check if install is still running
-out, _ = run(client, "ps aux | grep 'install_6.0' | grep -v grep")
-print(f"Install process running: {'YES' if out else 'NO'}")
+# Connect as opc
+client.connect(host, username='opc', pkey=key, timeout=15)
+print("Connected as opc")
 
-# Check install log
-out, _ = run(client, "tail -30 /tmp/aapanel_install.log 2>/dev/null")
-print(f"\nLast 30 lines of install log:\n{out}")
+# Run diagnostic commands
+commands = [
+    ("BT-Panel Process", "ps aux | grep 'BT-Panel' | grep -v grep"),
+    ("BT-Task Process", "ps aux | grep 'BT-Task' | grep -v grep"),
+    ("CPU Top", "top -bn1 | head -15"),
+    ("Port 36977", "ss -tlnp | grep 36977"),
+    ("Memory", "free -h"),
+    ("Disk", "df -h /"),
+    ("Curl Panel Page", "curl -s -o /dev/null -w 'HTTP_CODE:%{http_code} TIME:%{time_total}s SIZE:%{size_download}' --max-time 15 -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64)' http://127.0.0.1:36977/613ccb60/"),
+    ("Curl Code Endpoint", "curl -s -o /dev/null -w 'HTTP_CODE:%{http_code} TIME:%{time_total}s' --max-time 10 -H 'User-Agent: Mozilla/5.0' http://127.0.0.1:36977/code"),
+    ("Curl UserLang Endpoint", "curl -s -o /dev/null -w 'HTTP_CODE:%{http_code} TIME:%{time_total}s' --max-time 10 -H 'User-Agent: Mozilla/5.0' http://127.0.0.1:36977/userLang"),
+    ("Panel Error Log", "tail -20 /www/server/panel/logs/error.log 2>/dev/null || echo 'No error log'"),
+    ("BT-Panel executable", "ls -la /www/server/panel/BT-Panel"),
+    ("BT-Task executable", "ls -la /www/server/panel/BT-Task"),
+]
 
-# Check exit code
-out, _ = run(client, "grep 'INSTALL_EXIT_CODE' /tmp/aapanel_install.log 2>/dev/null")
-print(f"\nExit code marker: {out}")
-
-# Check if bt command exists
-out, _ = run(client, "which bt 2>/dev/null")
-print(f"\nbt command: {out if out else 'NOT FOUND'}")
-
-# Check panel info
-out, _ = run(client, "bt default 2>/dev/null")
-print(f"\nbt default: {out if out else 'N/A'}")
-
-# Port check
-out, _ = run(client, "ss -tlnp | grep -E ':(80|443|8888|3306) '")
-print(f"\nPorts: {out if out else 'None'}")
-
-# Docker check
-out, _ = run(client, "docker ps --format '{{.Names}} {{.Status}}'")
-print(f"\nDocker: {out if out else 'No containers'}")
+for label, cmd in commands:
+    print(f"\n=== {label} ===")
+    try:
+        stdin, stdout, stderr = client.exec_command(cmd, timeout=20)
+        out = stdout.read().decode().strip()
+        err = stderr.read().decode().strip()
+        if out:
+            print(out)
+        if err:
+            print(f"STDERR: {err}")
+    except Exception as e:
+        print(f"ERROR: {e}")
 
 client.close()
