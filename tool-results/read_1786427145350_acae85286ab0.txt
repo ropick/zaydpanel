@@ -1,0 +1,812 @@
+     1→=== /opt/zaydcluster/src/lib/email.ts ===
+     2→import nodemailer from 'nodemailer';
+     3→
+     4→const transporter = nodemailer.createTransport({
+     5→  service: 'gmail',
+     6→  auth: {
+     7→    user: process.env.GMAIL_USER,
+     8→    pass: process.env.GMAIL_PASS,
+     9→  },
+    10→});
+    11→
+    12→const BASE_URL = process.env.NEXTAUTH_URL || 'https://zaydcluster.com';
+    13→
+    14→interface EmailOptions {
+    15→  to: string;
+    16→  subject: string;
+    17→  html: string;
+    18→}
+    19→
+    20→export async function sendEmail({ to, subject, html }: EmailOptions) {
+    21→  try {
+    22→    const info = await transporter.sendMail({
+    23→      from: `"ZaydCluster" <${process.env.GMAIL_USER}>`,
+    24→      to,
+    25→      subject,
+    26→      html,
+    27→    });
+    28→    console.log('Email sent:', info.messageId);
+    29→    return { success: true, messageId: info.messageId };
+    30→  } catch (error) {
+    31→    console.error('Email error:', error);
+    32→    return { success: false, error };
+    33→  }
+    34→}
+    35→
+    36→const FOOTER = `<p style="color:#999;font-size:11px;margin-top:30px;text-align:center;">Email ini dikirim otomatis oleh sistem ZaydCluster.<br>Jangan bagikan email ini ke orang lain.</p>`;
+    37→
+    38→export function orderConfirmationEmail(name: string, orderNumber: string, packageName: string, domain?: string) {
+    39→  return `
+    40→    <!DOCTYPE html>
+    41→    <html>
+    42→    <head><meta charset="utf-8"></head>
+    43→    <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+    44→      <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;">
+    45→        <h1 style="color:white;margin:0;">ZaydCluster</h1>
+    46→        <p style="color:rgba(255,255,255,0.9);margin:10px 0 0;">Hosting Premium Indonesia</p>
+    47→      </div>
+    48→      <div style="background:#f8f9fa;padding:30px;border:1px solid #e9ecef;">
+    49→        <h2 style="color:#333;margin-top:0;">Pesanan Diterima!</h2>
+    50→        <p>Halo <strong>${name}</strong>,</p>
+    51→        <p>Terima kasih telah memesan layanan hosting kami. Berikut detail pesanan Anda:</p>
+    52→        <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+    53→          <tr><td style="padding:10px;border-bottom:1px solid #ddd;"><strong>No. Pesanan</strong></td><td style="padding:10px;border-bottom:1px solid #ddd;">${orderNumber}</td></tr>
+    54→          <tr><td style="padding:10px;border-bottom:1px solid #ddd;"><strong>Paket</strong></td><td style="padding:10px;border-bottom:1px solid #ddd;">${packageName}</td></tr>
+    55→          ${domain ? `<tr><td style="padding:10px;border-bottom:1px solid #ddd;"><strong>Domain</strong></td><td style="padding:10px;border-bottom:1px solid #ddd;">${domain}</td></tr>` : ''}
+    56→        </table>
+    57→        <div style="background:#e8f5e9;border-left:4px solid #4caf50;padding:15px;margin:20px 0;border-radius:0 8px 8px 0;">
+    58→          <strong style="color:#2e7d32;">Langkah Selanjutnya:</strong>
+    59→          <ol style="margin:10px 0 0;padding-left:20px;color:#555;">
+    60→            <li>Tim kami akan memproses pesanan Anda</li>
+    61→            <li>Anda akan menerima <strong>invoice pembayaran</strong> via email</li>
+    62→            <li>Setelah bayar, layanan akan aktif otomatis</li>
+    63→            <li>Anda akan menerima email berisi link untuk <strong>atur password</strong> akun Anda</li>
+    64→          </ol>
+    65→        </div>
+    66→        <p style="text-align:center;margin:25px 0;">
+    67→          <a href="${BASE_URL}/login" style="background:#667eea;color:white;padding:12px 30px;text-decoration:none;border-radius:5px;font-weight:bold;">Login ke Akun</a>
+    68→        </p>
+    69→        <p style="color:#888;font-size:13px;">Email: <strong>${name}</strong> akan digunakan untuk login ke client area.</p>
+    70→        ${FOOTER}
+    71→      </div>
+    72→    </body>
+    73→    </html>
+    74→  `;
+    75→}
+    76→
+    77→export function passwordSetupEmail(name: string, email: string, token: string) {
+    78→  const setupUrl = `${BASE_URL}/set-password?token=${token}`;
+    79→  return `
+    80→    <!DOCTYPE html>
+    81→    <html>
+    82→    <head><meta charset="utf-8"></head>
+    83→    <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+    84→      <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;">
+    85→        <h1 style="color:white;margin:0;">ZaydCluster</h1>
+    86→        <p style="color:rgba(255,255,255,0.9);margin:10px 0 0;">Atur Password Anda</p>
+    87→      </div>
+    88→      <div style="background:#f8f9fa;padding:30px;border:1px solid #e9ecef;">
+    89→        <h2 style="color:#333;margin-top:0;">Selamat Datang, ${name}!</h2>
+    90→        <p>Akun Anda di ZaydCluster sudah dibuat. Sekarang atur password Anda untuk bisa login ke client area.</p>
+    91→        <p style="text-align:center;margin:30px 0;">
+    92→          <a href="${setupUrl}" style="background:#667eea;color:white;padding:15px 40px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">Atur Password Sekarang</a>
+    93→        </p>
+    94→        <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:15px;margin:20px 0;border-radius:0 8px 8px 0;">
+    95→          <p style="margin:0;color:#856404;font-size:13px;">
+    96→            <strong>Penting:</strong> Link ini berlaku selama <strong>24 jam</strong>. Jika link expired, silakan login dan minta reset password.
+    97→          </p>
+    98→        </div>
+    99→        <p style="color:#888;font-size:13px;">Email Anda: <strong>${email}</strong></p>
+   100→        <p style="color:#888;font-size:12px;">Jika Anda tidak merasa mendaftar di ZaydCluster, abaikan email ini.</p>
+   101→        ${FOOTER}
+   102→      </div>
+   103→    </body>
+   104→    </html>
+   105→  `;
+   106→}
+   107→
+   108→export function invoiceEmail(name: string, invoiceNumber: string, amount: number, dueDate: string, paymentUrl?: string) {
+   109→  return `
+   110→    <!DOCTYPE html>
+   111→    <html>
+   112→    <head><meta charset="utf-8"></head>
+   113→    <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+   114→      <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;">
+   115→        <h1 style="color:white;margin:0;">ZaydCluster</h1>
+   116→        <p style="color:rgba(255,255,255,0.9);margin:10px 0 0;">Invoice Pembayaran</p>
+   117→      </div>
+   118→      <div style="background:#f8f9fa;padding:30px;border:1px solid #e9ecef;">
+   119→        <h2 style="color:#333;margin-top:0;">Invoice #${invoiceNumber}</h2>
+   120→        <p>Halo <strong>${name}</strong>,</p>
+   121→        <p>Anda memiliki invoice yang perlu dibayar:</p>
+   122→        <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+   123→          <tr><td style="padding:10px;border-bottom:1px solid #ddd;"><strong>No. Invoice</strong></td><td style="padding:10px;border-bottom:1px solid #ddd;">${invoiceNumber}</td></tr>
+   124→          <tr><td style="padding:10px;border-bottom:1px solid #ddd;"><strong>Total</strong></td><td style="padding:10px;border-bottom:1px solid #ddd;color:#e74c3c;font-size:18px;"><strong>Rp ${amount.toLocaleString('id-ID')}</strong></td></tr>
+   125→          <tr><td style="padding:10px;border-bottom:1px solid #ddd;"><strong>Batas Pembayaran</strong></td><td style="padding:10px;border-bottom:1px solid #ddd;">${dueDate}</td></tr>
+   126→        </table>
+   127→        ${paymentUrl ? `
+   128→        <p style="text-align:center;margin:25px 0;">
+   129→          <a href="${paymentUrl}" style="background:#e74c3c;color:white;padding:15px 40px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">Bayar Sekarang</a>
+   130→        </p>
+   131→        <p style="text-align:center;color:#888;font-size:13px;">Atau copy link ini: <br><a href="${paymentUrl}" style="color:#667eea;word-break:break-all;">${paymentUrl}</a></p>
+   132→        ` : `
+   133→        <p style="text-align:center;margin:25px 0;">
+   134→          <a href="${BASE_URL}/invoices" style="background:#667eea;color:white;padding:12px 30px;text-decoration:none;border-radius:5px;font-weight:bold;">Lihat Invoice di Dashboard</a>
+   135→        </p>
+   136→        `}
+   137→        <div style="background:#e3f2fd;border-left:4px solid #2196f3;padding:15px;margin:20px 0;border-radius:0 8px 8px 0;">
+   138→          <p style="margin:0;color:#1565c0;font-size:13px;">
+   139→            <strong>Cara Bayar:</strong> Login ke client area → Invoice → Bayar. Atau gunakan link bayar di atas.
+   140→          </p>
+   141→        </div>
+   142→        <p style="color:#888;font-size:13px;">Login: <a href="${BASE_URL}/login" style="color:#667eea;">${BASE_URL}/login</a></p>
+   143→        ${FOOTER}
+   144→      </div>
+   145→    </body>
+   146→    </html>
+   147→  `;
+   148→}
+   149→
+   150→export function paymentConfirmationEmail(name: string, invoiceNumber: string, amount: number) {
+   151→  return `
+   152→    <!DOCTYPE html>
+   153→    <html>
+   154→    <head><meta charset="utf-8"></head>
+   155→    <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+   156→      <div style="background:linear-gradient(135deg,#27ae60 0%,#2ecc71 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;">
+   157→        <h1 style="color:white;margin:0;">ZaydCluster</h1>
+   158→        <p style="color:rgba(255,255,255,0.9);margin:10px 0 0;">Pembayaran Dikonfirmasi</p>
+   159→      </div>
+   160→      <div style="background:#f8f9fa;padding:30px;border:1px solid #e9ecef;">
+   161→        <h2 style="color:#27ae60;margin-top:0;">Pembayaran Berhasil!</h2>
+   162→        <p>Halo <strong>${name}</strong>,</p>
+   163→        <p>Pembayaran Anda telah berhasil dikonfirmasi:</p>
+   164→        <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+   165→          <tr><td style="padding:10px;border-bottom:1px solid #ddd;"><strong>No. Invoice</strong></td><td style="padding:10px;border-bottom:1px solid #ddd;">${invoiceNumber}</td></tr>
+   166→          <tr><td style="padding:10px;border-bottom:1px solid #ddd;"><strong>Jumlah</strong></td><td style="padding:10px;border-bottom:1px solid #ddd;color:#27ae60;font-size:18px;"><strong>Rp ${amount.toLocaleString('id-ID')}</strong></td></tr>
+   167→        </table>
+   168→        <p>Layanan hosting Anda sekarang <strong>aktif</strong>! Anda bisa mulai menggunakan layanan.</p>
+   169→        <p style="text-align:center;margin:25px 0;">
+   170→          <a href="${BASE_URL}/dashboard" style="background:#27ae60;color:white;padding:15px 40px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">Buka Dashboard</a>
+   171→        </p>
+   172→        <p style="color:#888;font-size:13px;">Login: <a href="${BASE_URL}/login" style="color:#27ae60;">${BASE_URL}/login</a></p>
+   173→        ${FOOTER}
+   174→      </div>
+   175→    </body>
+   176→    </html>
+   177→  `;
+   178→}
+   179→
+   180→export function renewalReminderEmail(name: string, invoiceNumber: string, amount: number, dueDate: string, daysLeft: number) {
+   181→  return `
+   182→    <!DOCTYPE html>
+   183→    <html>
+   184→    <head><meta charset="utf-8"></head>
+   185→    <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+   186→      <div style="background:linear-gradient(135deg,#f39c12 0%,#e67e22 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;">
+   187→        <h1 style="color:white;margin:0;">ZaydCluster</h1>
+   188→        <p style="color:rgba(255,255,255,0.9);margin:10px 0 0;">Pengingat Perpanjangan</p>
+   189→      </div>
+   190→      <div style="background:#f8f9fa;padding:30px;border:1px solid #e9ecef;">
+   191→        <h2 style="color:#f39c12;margin-top:0;">Layanan Akan Habis!</h2>
+   192→        <p>Halo <strong>${name}</strong>,</p>
+   193→        <p>Layanan hosting Anda akan berakhir dalam <strong>${daysLeft} hari</strong>.</p>
+   194→        <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+   195→          <tr><td style="padding:10px;border-bottom:1px solid #ddd;"><strong>No. Invoice</strong></td><td style="padding:10px;border-bottom:1px solid #ddd;">${invoiceNumber}</td></tr>
+   196→          <tr><td style="padding:10px;border-bottom:1px solid #ddd;"><strong>Total</strong></td><td style="padding:10px;border-bottom:1px solid #ddd;color:#e74c3c;font-size:18px;"><strong>Rp ${amount.toLocaleString('id-ID')}</strong></td></tr>
+   197→          <tr><td style="padding:10px;border-bottom:1px solid #ddd;"><strong>Batas Pembayaran</strong></td><td style="padding:10px;border-bottom:1px solid #ddd;">${dueDate}</td></tr>
+   198→        </table>
+   199→        <p style="text-align:center;margin:25px 0;">
+   200→          <a href="${BASE_URL}/invoices" style="background:#f39c12;color:white;padding:15px 40px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">Bayar Sekarang</a>
+   201→        </p>
+   202→        <p style="color:#888;font-size:13px;">Login: <a href="${BASE_URL}/login" style="color:#f39c12;">${BASE_URL}/login</a></p>
+   203→        ${FOOTER}
+   204→      </div>
+   205→    </body>
+   206→    </html>
+   207→  `;
+   208→}
+   209→
+   210→export function serviceSuspendedEmail(name: string, reason: string) {
+   211→  return `
+   212→    <!DOCTYPE html>
+   213→    <html>
+   214→    <head><meta charset="utf-8"></head>
+   215→    <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+   216→      <div style="background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;">
+   217→        <h1 style="color:white;margin:0;">ZaydCluster</h1>
+   218→        <p style="color:rgba(255,255,255,0.9);margin:10px 0 0;">Layanan Disuspend</p>
+   219→      </div>
+   220→      <div style="background:#f8f9fa;padding:30px;border:1px solid #e9ecef;">
+   221→        <h2 style="color:#e74c3c;margin-top:0;">Layanan Anda Disuspend</h2>
+   222→        <p>Halo <strong>${name}</strong>,</p>
+   223→        <p>Layanan hosting Anda telah disuspend karena: <strong>${reason}</strong></p>
+   224→        <p style="text-align:center;margin:25px 0;">
+   225→          <a href="${BASE_URL}/invoices" style="background:#e74c3c;color:white;padding:15px 40px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">Bayar Sekarang</a>
+   226→        </p>
+   227→        <p style="color:#888;font-size:13px;">Login: <a href="${BASE_URL}/login" style="color:#e74c3c;">${BASE_URL}/login</a></p>
+   228→        ${FOOTER}
+   229→      </div>
+   230→    </body>
+   231→    </html>
+   232→  `;
+   233→}
+   234→
+   235→
+   236→// ====== Hosting Ready Email ======
+   237→export function hostingReadyEmail(
+   238→  customerName: string,
+   239→  domain: string,
+   240→  packageType: string,
+   241→  orderNumber: string
+   242→): string {
+   243→  return `
+   244→    <head><meta charset="utf-8"></head>
+   245→    <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+   246→      <div style="background:linear-gradient(135deg,#1e40af 0%,#3b82f6 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;">
+   247→        <h1 style="color:white;margin:0;">ZaydCluster</h1>
+   248→        <p style="color:rgba(255,255,255,0.9);margin:10px 0 0;">Hosting Siap Digunakan!</p>
+   249→      </div>
+   250→      <div style="background:#f8f9fa;padding:30px;border:1px solid #e9ecef;border-radius:0 0 10px 10px;">
+   251→        <p>Halo <strong>${customerName}</strong>,</p>
+   252→        <p>Hosting Anda telah berhasil di-aktifkan!</p>
+   253→        
+   254→        <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+   255→          <tr style="background:#eff6ff;">
+   256→            <td style="padding:12px;border:1px solid #dbeafe;font-weight:bold;">Domain</td>
+   257→            <td style="padding:12px;border:1px solid #dbeafe;"><strong>${domain}</strong></td>
+   258→          </tr>
+   259→          <tr>
+   260→            <td style="padding:12px;border:1px solid #e5e7eb;font-weight:bold;">Paket</td>
+   261→            <td style="padding:12px;border:1px solid #e5e7eb;">${packageType}</td>
+   262→          </tr>
+   263→          <tr style="background:#eff6ff;">
+   264→            <td style="padding:12px;border:1px solid #dbeafe;font-weight:bold;">Order</td>
+   265→            <td style="padding:12px;border:1px solid #dbeafe;">${orderNumber}</td>
+   266→          </tr>
+   267→          <tr>
+   268→            <td style="padding:12px;border:1px solid #e5e7eb;font-weight:bold;">Server</td>
+   269→            <td style="padding:12px;border:1px solid #e5e7eb;">Oracle ARM (Indonesia)</td>
+   270→          </tr>
+   271→        </table>
+   272→        
+   273→        <h3 style="color:#1e40af;">Langkah Selanjutnya:</h3>
+   274→        <ol style="color:#475569;line-height:2;">
+   275→          <li>Login ke dashboard ZaydCluster</li>
+   276→          <li>Upload website Anda ke folder <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">public_html</code></li>
+   277→          <li>Jika pakai custom domain, arahkan DNS A record ke server kami</li>
+   278→        </ol>
+   279→        
+   280→        <div style="text-align:center;margin-top:30px;">
+   281→          <a href="https://staging.pro99.my.id" style="background:#1e40af;color:white;padding:12px 30px;border-radius:8px;text-decoration:none;font-weight:bold;">Buka Dashboard</a>
+   282→        </div>
+   283→        
+   284→        <p style="margin-top:30px;color:#64748b;font-size:13px;">
+   285→          Jika ada pertanyaan, hubungi support kami.<br>
+   286→          ZaydCluster - Shared Hosting Indonesia
+   287→        </p>
+   288→      </div>
+   289→    </body>
+   290→  `;
+   291→}
+   292→
+   293→=== /opt/zaydcluster/src/app/api/payment/callback/route.ts ===
+   294→import { NextRequest, NextResponse } from 'next/server';
+   295→import { db } from '@/lib/db';
+   296→import { sendEmail, paymentConfirmationEmail, hostingReadyEmail } from '@/lib/email';
+   297→import { verifyXenditWebhook } from '@/lib/payment';
+   298→
+   299→export async function POST(request: NextRequest) {
+   300→  try {
+   301→    const body = await request.json();
+   302→    const signature = request.headers.get('x-callback-token') || '';
+   303→
+   304→    if (!verifyXenditWebhook(body, signature)) {
+   305→      console.error('Invalid Xendit webhook signature');
+   306→      return NextResponse.json({ success: false, message: 'Invalid signature' }, { status: 403 });
+   307→    }
+   308→
+   309→    if (body.status === 'PAID') {
+   310→      const invoice = await db.invoice.findFirst({
+   311→        where: { invoiceNumber: body.external_id },
+   312→        include: { order: true, user: true },
+   313→      });
+   314→
+   315→      if (invoice && invoice.status !== 'paid') {
+   316→        await db.invoice.update({
+   317→          where: { id: invoice.id },
+   318→          data: {
+   319→            status: 'paid',
+   320→            paidAt: new Date(),
+   321→            paymentMethod: body.payment_method || 'xendit',
+   322→            paymentRef: body.id,
+   323→          },
+   324→        });
+   325→
+   326→        await db.order.update({
+   327→          where: { id: invoice.orderId },
+   328→          data: { status: 'active' },
+   329→        });
+   330→
+   331→        const nextBilling = new Date();
+   332→        if (invoice.order.billingCycle === 'yearly') {
+   333→          nextBilling.setFullYear(nextBilling.getFullYear() + 1);
+   334→        } else {
+   335→          nextBilling.setMonth(nextBilling.getMonth() + 1);
+   336→        }
+   337→
+   338→        const subscription = await db.subscription.create({
+   339→          data: {
+   340→            userId: invoice.userId,
+   341→            orderId: invoice.orderId,
+   342→            status: 'active',
+   343→            billingCycle: invoice.order.billingCycle,
+   344→            amount: invoice.totalAmount,
+   345→            nextBilling,
+   346→          },
+   347→        });
+   348→
+   349→        // Send payment confirmation email
+   350→        await sendEmail({
+   351→          to: invoice.user.email,
+   352→          subject: `[ZaydCluster] Pembayaran Berhasil - ${invoice.invoiceNumber}`,
+   353→          html: paymentConfirmationEmail(invoice.user.name, invoice.invoiceNumber, invoice.totalAmount),
+   354→        });
+   355→
+   356→        // ============ AUTO-PROVISION HOSTING ============
+   357→        try {
+   358→          const domain = invoice.order.domain || '';
+   359→          const subdomain = domain
+   360→            ? domain.replace(/\./g, '-')
+   361→            : invoice.user.name.toLowerCase()
+   362→                .replace(/[^a-z0-9]/g, '')
+   363→                .substring(0, 20) + '-' + invoice.orderId.substring(0, 6);
+   364→
+   365→          // Call provision API on host (runs as root via systemd service)
+   366→          const provRes = await fetch('http://host.docker.internal:9999/provision', {
+   367→            method: 'POST',
+   368→            headers: {
+   369→              'Content-Type': 'application/json',
+   370→              'Authorization': `Bearer ${process.env.PROVISION_SECRET || 'zc-prov-2026-secret'}`,
+   371→            },
+   372→            body: JSON.stringify({
+   373→              domain,
+   374→              subdomain,
+   375→              name: invoice.user.name,
+   376→              package: invoice.order.package || 'Starter',
+   377→              email: invoice.user.email,
+   378→              order: invoice.order.orderNumber,
+   379→            }),
+   380→            signal: AbortSignal.timeout(60_000),
+   381→          });
+   382→          const provData = await provRes.json();
+   383→          console.log('Provisioning result:', provData);
+   384→
+   385→          if (provData.success) {
+   386→            const effectiveDomain = domain || `${subdomain}.pro99.my.id`;
+   387→            await sendEmail({
+   388→              to: invoice.user.email,
+   389→              subject: `[ZaydCluster] Hosting Anda Aktif - ${effectiveDomain}`,
+   390→              html: hostingReadyEmail(invoice.user.name, effectiveDomain, invoice.order.package, invoice.order.orderNumber),
+   391→            });
+   392→          }
+   393→        } catch (provisionError) {
+   394→          console.error('Auto-provision failed:', provisionError);
+   395→        }
+   396→        // ============ END AUTO-PROVISION ============
+   397→      }
+   398→    }
+   399→
+   400→    return NextResponse.json({ success: true });
+   401→  } catch (error) {
+   402→    console.error('Xendit callback error:', error);
+   403→    return NextResponse.json({ success: false, message: 'Callback error' }, { status: 500 });
+   404→  }
+   405→}
+   406→
+   407→=== /opt/zaydcluster/src/app/api/order/route.ts ===
+   408→import { NextRequest, NextResponse } from "next/server";
+   409→import { db } from "@/lib/db";
+   410→import { z } from "zod";
+   411→import { generateOrderNumber, generateInvoiceNumber, PACKAGE_PRICES } from "@/lib/payment";
+   412→import { sendEmail, orderConfirmationEmail, invoiceEmail, passwordSetupEmail } from "@/lib/email";
+   413→import crypto from "crypto";
+   414→
+   415→const orderSchema = z.object({
+   416→  name: z.string().min(2, "Nama minimal 2 karakter"),
+   417→  email: z.string().email("Email tidak valid"),
+   418→  phone: z.string().min(8, "Nomor telepon minimal 8 digit"),
+   419→  package: z.enum(["Starter", "Business", "Premium"]),
+   420→  billingCycle: z.enum(["monthly", "yearly"]).default("monthly"),
+   421→  domain: z.string().optional(),
+   422→  message: z.string().optional(),
+   423→});
+   424→
+   425→export async function POST(request: NextRequest) {
+   426→  try {
+   427→    const body = await request.json();
+   428→    const validated = orderSchema.parse(body);
+   429→
+   430→    const totalAmount = PACKAGE_PRICES[validated.package][validated.billingCycle];
+   431→
+   432→    let user = await db.user.findUnique({ where: { email: validated.email } });
+   433→    let isNewUser = false;
+   434→
+   435→    if (!user) {
+   436→      const bcrypt = await import("bcryptjs");
+   437→      const tempPassword = await bcrypt.hash("not-set-" + Date.now(), 12);
+   438→      user = await db.user.create({
+   439→        data: {
+   440→          name: validated.name,
+   441→          email: validated.email,
+   442→          phone: validated.phone,
+   443→          password: tempPassword,
+   444→          role: "client",
+   445→        },
+   446→      });
+   447→      isNewUser = true;
+   448→    }
+   449→
+   450→    const orderNumber = generateOrderNumber();
+   451→    const invoiceNumber = generateInvoiceNumber();
+   452→
+   453→    const order = await db.order.create({
+   454→      data: {
+   455→        orderNumber,
+   456→        userId: user.id,
+   457→        name: validated.name,
+   458→        email: validated.email,
+   459→        phone: validated.phone,
+   460→        package: validated.package,
+   461→        billingCycle: validated.billingCycle,
+   462→        domain: validated.domain || null,
+   463→        message: validated.message || null,
+   464→        status: "pending",
+   465→        totalAmount,
+   466→      },
+   467→    });
+   468→
+   469→    const dueDate = new Date();
+   470→    dueDate.setDate(dueDate.getDate() + 3);
+   471→
+   472→    const invoice = await db.invoice.create({
+   473→      data: {
+   474→        invoiceNumber,
+   475→        orderId: order.id,
+   476→        userId: user.id,
+   477→        amount: totalAmount,
+   478→        tax: 0,
+   479→        totalAmount,
+   480→        status: "unpaid",
+   481→        dueDate,
+   482→      },
+   483→    });
+   484→
+   485→    const emailPromises = [];
+   486→
+   487→    emailPromises.push(
+   488→      sendEmail({
+   489→        to: validated.email,
+   490→        subject: `[ZaydCluster] Pesanan Diterima - ${orderNumber}`,
+   491→        html: orderConfirmationEmail(validated.name, orderNumber, validated.package, validated.domain),
+   492→      })
+   493→    );
+   494→
+   495→    emailPromises.push(
+   496→      sendEmail({
+   497→        to: validated.email,
+   498→        subject: `[ZaydCluster] Invoice #${invoiceNumber} - Rp ${totalAmount.toLocaleString("id-ID")}`,
+   499→        html: invoiceEmail(validated.name, invoiceNumber, totalAmount, dueDate.toLocaleDateString("id-ID")),
+   500→      })
+   501→    );
+   502→
+   503→    let setupToken: string | null = null;
+   504→
+   505→    if (isNewUser) {
+   506→      setupToken = crypto.randomBytes(32).toString("hex");
+   507→      const tokenExpiry = new Date();
+   508→      tokenExpiry.setHours(tokenExpiry.getHours() + 24);
+   509→
+   510→      await db.session.create({
+   511→        data: {
+   512→          sessionToken: `setup:${setupToken}`,
+   513→          userId: user.id,
+   514→          expires: tokenExpiry,
+   515→        },
+   516→      });
+   517→
+   518→      emailPromises.push(
+   519→        sendEmail({
+   520→          to: validated.email,
+   521→          subject: `[ZaydCluster] Atur Password Akun Anda`,
+   522→          html: passwordSetupEmail(validated.name, validated.email, setupToken),
+   523→        })
+   524→      );
+   525→    }
+   526→
+   527→    emailPromises.push(
+   528→      sendEmail({
+   529→        to: process.env.ADMIN_EMAIL || "admin@zaydcluster.com",
+   530→        subject: `[ZaydCluster] Pesanan Baru - ${orderNumber}`,
+   531→        html: `<h2>Pesanan Baru</h2><p>No: ${orderNumber}</p><p>Pelanggan: ${validated.name} (${validated.email})</p><p>Paket: ${validated.package} ${validated.billingCycle}</p><p>Total: Rp ${totalAmount.toLocaleString("id-ID")}</p>`,
+   532→      })
+   533→    );
+   534→
+   535→    await Promise.allSettled(emailPromises);
+   536→
+   537→    return NextResponse.json(
+   538→      {
+   539→        success: true,
+   540→        message: "Pesanan berhasil dibuat!",
+   541→        orderId: order.id,
+   542→        orderNumber,
+   543→        invoiceNumber,
+   544→        isNewUser,
+   545→        setupToken,
+   546→      },
+   547→      { status: 201 }
+   548→    );
+   549→  } catch (error) {
+   550→    if (error instanceof z.ZodError) {
+   551→      return NextResponse.json(
+   552→        { success: false, message: error.errors[0].message },
+   553→        { status: 400 }
+   554→      );
+   555→    }
+   556→    console.error("Order error:", error);
+   557→    return NextResponse.json(
+   558→      { success: false, message: "Terjadi kesalahan server. Silakan coba lagi." },
+   559→      { status: 500 }
+   560→    );
+   561→  }
+   562→}
+   563→
+   564→=== /opt/zaydcluster/src/app/api/auth/register/route.ts ===
+   565→import { NextRequest, NextResponse } from 'next/server';
+   566→import { db } from '@/lib/db';
+   567→import bcrypt from 'bcryptjs';
+   568→import { z } from 'zod';
+   569→
+   570→const registerSchema = z.object({
+   571→  name: z.string().min(2, 'Nama minimal 2 karakter'),
+   572→  email: z.string().email('Email tidak valid'),
+   573→  phone: z.string().min(8, 'Nomor telepon minimal 8 digit'),
+   574→  password: z.string().min(6, 'Password minimal 6 karakter'),
+   575→});
+   576→
+   577→export async function POST(request: NextRequest) {
+   578→  try {
+   579→    const body = await request.json();
+   580→    const validated = registerSchema.parse(body);
+   581→
+   582→    const existingUser = await db.user.findUnique({
+   583→      where: { email: validated.email },
+   584→    });
+   585→
+   586→    if (existingUser) {
+   587→      return NextResponse.json(
+   588→        { success: false, message: 'Email sudah terdaftar' },
+   589→        { status: 400 }
+   590→      );
+   591→    }
+   592→
+   593→    const hashedPassword = await bcrypt.hash(validated.password, 12);
+   594→
+   595→    const user = await db.user.create({
+   596→      data: {
+   597→        name: validated.name,
+   598→        email: validated.email,
+   599→        phone: validated.phone,
+   600→        password: hashedPassword,
+   601→        role: 'client',
+   602→      },
+   603→    });
+   604→
+   605→    return NextResponse.json(
+   606→      {
+   607→        success: true,
+   608→        message: 'Registrasi berhasil',
+   609→        user: { id: user.id, name: user.name, email: user.email },
+   610→      },
+   611→      { status: 201 }
+   612→    );
+   613→  } catch (error) {
+   614→    if (error instanceof z.ZodError) {
+   615→      return NextResponse.json(
+   616→        { success: false, message: error.errors[0].message },
+   617→        { status: 400 }
+   618→      );
+   619→    }
+   620→    console.error('Register error:', error);
+   621→    return NextResponse.json(
+   622→      { success: false, message: 'Terjadi kesalahan server' },
+   623→      { status: 500 }
+   624→    );
+   625→  }
+   626→}
+   627→
+   628→=== /opt/zaydcluster/src/app/(client)/dashboard/page.tsx ===
+   629→(empty)
+   630→
+   631→=== /opt/zaydcluster/src/app/(client)/profile/page.tsx ===
+   632→(empty)
+   633→
+   634→=== /opt/zaydcluster/src/app/api/webhook/xendit/route.ts ===
+   635→import { NextRequest, NextResponse } from 'next/server';
+   636→import { db } from '@/lib/db';
+   637→import { sendEmail, paymentConfirmationEmail } from '@/lib/email';
+   638→import crypto from 'crypto';
+   639→
+   640→const XENDIT_WEBHOOK_SECRET = process.env.XENDIT_WEBHOOK_SECRET || '';
+   641→
+   642→export async function POST(request: NextRequest) {
+   643→  try {
+   644→    const body = await request.json();
+   645→    const callbackToken = request.headers.get('x-callback-token') || '';
+   646→
+   647→    if (XENDIT_WEBHOOK_SECRET) {
+   648→      const expectedToken = crypto
+   649→        .createHmac('sha256', XENDIT_WEBHOOK_SECRET)
+   650→        .update(JSON.stringify(body))
+   651→        .digest('hex');
+   652→
+   653→      if (callbackToken !== expectedToken) {
+   654→        return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 403 });
+   655→      }
+   656→    }
+   657→
+   658→    if (body.status === 'PAID') {
+   659→      const invoice = await db.invoice.findFirst({
+   660→        where: { invoiceNumber: body.external_id },
+   661→        include: { order: true, user: true },
+   662→      });
+   663→
+   664→      if (invoice && invoice.status !== 'paid') {
+   665→        await db.invoice.update({
+   666→          where: { id: invoice.id },
+   667→          data: {
+   668→            status: 'paid',
+   669→            paidAt: new Date(),
+   670→            paymentMethod: body.payment_method || 'xendit',
+   671→            paymentRef: body.id,
+   672→          },
+   673→        });
+   674→
+   675→        await db.order.update({
+   676→          where: { id: invoice.orderId },
+   677→          data: { status: 'active' },
+   678→        });
+   679→
+   680→        const nextBilling = new Date();
+   681→        if (invoice.order.billingCycle === 'yearly') {
+   682→          nextBilling.setFullYear(nextBilling.getFullYear() + 1);
+   683→        } else {
+   684→          nextBilling.setMonth(nextBilling.getMonth() + 1);
+   685→        }
+   686→
+   687→        await db.subscription.create({
+   688→          data: {
+   689→            userId: invoice.userId,
+   690→            orderId: invoice.orderId,
+   691→            status: 'active',
+   692→            billingCycle: invoice.order.billingCycle,
+   693→            amount: invoice.totalAmount,
+   694→            nextBilling,
+   695→          },
+   696→        });
+   697→
+   698→        await sendEmail({
+   699→          to: invoice.user.email,
+   700→          subject: `[ZaydCluster] Pembayaran Berhasil - ${invoice.invoiceNumber}`,
+   701→          html: paymentConfirmationEmail(invoice.user.name, invoice.invoiceNumber, invoice.totalAmount),
+   702→        });
+   703→
+   704→        console.log(`Payment confirmed for invoice ${invoice.invoiceNumber}`);
+   705→      }
+   706→    }
+   707→
+   708→    return NextResponse.json({ success: true });
+   709→  } catch (error) {
+   710→    console.error('Xendit webhook error:', error);
+   711→    return NextResponse.json({ success: false, message: 'Webhook error' }, { status: 500 });
+   712→  }
+   713→}
+   714→
+   715→=== /opt/zaydcluster/src/lib/payment.ts ===
+   716→import crypto from 'crypto';
+   717→
+   718→const XENDIT_SECRET_KEY = process.env.XENDIT_SECRET_KEY || '';
+   719→const XENDIT_WEBHOOK_SECRET = process.env.XENDIT_WEBHOOK_SECRET || '';
+   720→const BASE_URL = process.env.NEXTAUTH_URL || 'https://zaydcluster.com';
+   721→
+   722→interface PaymentParams {
+   723→  orderId: string;
+   724→  invoiceNumber: string;
+   725→  amount: number;
+   726→  customerName: string;
+   727→  customerEmail: string;
+   728→  customerPhone: string;
+   729→  description?: string;
+   730→}
+   731→
+   732→export async function createPaymentLink(params: PaymentParams) {
+   733→  const auth = Buffer.from(`${XENDIT_SECRET_KEY}:`).toString('base64');
+   734→
+   735→  const dueDate = new Date();
+   736→  dueDate.setDate(dueDate.getDate() + 3);
+   737→
+   738→  const payload = {
+   739→    external_id: params.invoiceNumber,
+   740→    amount: params.amount,
+   741→    description: params.description || `Invoice ${params.invoiceNumber} - ZaydCluster Hosting`,
+   742→    invoice_duration: 72,
+   743→    customer: {
+   744→      given_names: params.customerName,
+   745→      email: params.customerEmail,
+   746→      mobile_number: params.customerPhone,
+   747→    },
+   748→    success_redirect_url: `${BASE_URL}/invoices`,
+   749→    failure_redirect_url: `${BASE_URL}/invoices`,
+   750→    currency: 'IDR',
+   751→    items: [
+   752→      {
+   753→        name: `Hosting - ${params.invoiceNumber}`,
+   754→        quantity: 1,
+   755→        price: params.amount,
+   756→      },
+   757→    ],
+   758→  };
+   759→
+   760→  try {
+   761→    const response = await fetch('https://api.xendit.co/v2/invoices', {
+   762→      method: 'POST',
+   763→      headers: {
+   764→        'Content-Type': 'application/json',
+   765→        'Authorization': `Basic ${auth}`,
+   766→      },
+   767→      body: JSON.stringify(payload),
+   768→    });
+   769→
+   770→    const data = await response.json();
+   771→    if (data.id) {
+   772→      return { success: true, paymentUrl: data.invoice_url, invoiceId: data.id };
+   773→    }
+   774→    return { success: false, error: data.message || 'Xendit error' };
+   775→  } catch (error) {
+   776→    console.error('Xendit error:', error);
+   777→    return { success: false, error: 'Payment gateway error' };
+   778→  }
+   779→}
+   780→
+   781→export function verifyXenditWebhook(body: any, signature: string): boolean {
+   782→  if (!XENDIT_WEBHOOK_SECRET) return true;
+   783→
+   784→  const webhookToken = crypto
+   785→    .createHmac('sha256', XENDIT_WEBHOOK_SECRET)
+   786→    .update(body.id + body.external_id + body.amount)
+   787→    .digest('hex');
+   788→
+   789→  return webhookToken === signature;
+   790→}
+   791→
+   792→export function generateOrderNumber(): string {
+   793→  const now = new Date();
+   794→  const prefix = 'ZC';
+   795→  const date = now.toISOString().slice(0, 10).replace(/-/g, '');
+   796→  const random = crypto.randomBytes(3).toString('hex').toUpperCase();
+   797→  return `${prefix}-${date}-${random}`;
+   798→}
+   799→
+   800→export function generateInvoiceNumber(): string {
+   801→  const now = new Date();
+   802→  const prefix = 'INV';
+   803→  const date = now.toISOString().slice(0, 10).replace(/-/g, '');
+   804→  const random = crypto.randomBytes(3).toString('hex').toUpperCase();
+   805→  return `${prefix}-${date}-${random}`;
+   806→}
+   807→
+   808→export const PACKAGE_PRICES = {
+   809→  Starter: { monthly: 29900, yearly: 299000 },
+   810→  Business: { monthly: 69900, yearly: 699000 },
+   811→  Premium: { monthly: 149900, yearly: 1499000 },
+   812→} as const;
