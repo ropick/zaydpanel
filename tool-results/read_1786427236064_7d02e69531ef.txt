@@ -1,0 +1,1256 @@
+     1→============================================================
+     2→FILE: /opt/zaydcluster/src/app/(auth)/register/page.tsx
+     3→============================================================
+     4→
+     5→============================================================
+     6→FILE: /opt/zaydcluster/src/app/(client)/services/page.tsx
+     7→============================================================
+     8→
+     9→============================================================
+    10→FILE: /opt/zaydcluster/src/app/(client)/dashboard/page.tsx
+    11→============================================================
+    12→
+    13→============================================================
+    14→FILE: /opt/zaydcluster/src/app/page.tsx
+    15→============================================================
+    16→'use client';
+    17→
+    18→import { useState, useEffect } from 'react';
+    19→import { motion, AnimatePresence } from 'framer-motion';
+    20→import { Button } from '@/components/ui/button';
+    21→import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+    22→import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+    23→import { Badge } from '@/components/ui/badge';
+    24→import { Input } from '@/components/ui/input';
+    25→import { Label } from '@/components/ui/label';
+    26→import { Textarea } from '@/components/ui/textarea';
+    27→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+    28→import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet';
+    29→import { Separator } from '@/components/ui/separator';
+    30→import {
+    31→  Server,
+    32→  Shield,
+    33→  Zap,
+    34→  Clock,
+    35→  Globe,
+    36→  Headphones,
+    37→  Check,
+    38→  ChevronRight,
+    39→  Star,
+    40→  ArrowRight,
+    41→  Mail,
+    42→  Phone,
+    43→  MessageCircle,
+    44→  Menu,
+    45→  X,
+    46→  Send,
+    47→  HardDrive,
+    48→  Cpu,
+    49→  Database,
+    50→  RefreshCw,
+    51→  Lock,
+    52→  TrendingUp,
+    53→  Users,
+    54→  Award,
+    55→  MapPin,
+    56→  ExternalLink,
+    57→} from 'lucide-react';
+    58→import { toast } from 'sonner';
+    59→
+    60→// ==================== DATA ====================
+    61→
+    62→const packages = [
+    63→  {
+    64→    name: 'Starter',
+    65→    price: '29.900',
+    66→    period: '/bulan',
+    67→    description: 'Cocok untuk website pribadi, blog, atau portfolio.',
+    68→    popular: false,
+    69→    features: [
+    70→      '1 GB SSD Storage',
+    71→      '10 GB Bandwidth',
+    72→      '1 Website',
+    73→      '1 Email Account',
+    74→      'SSL Gratis (Let\'s Encrypt)',
+    75→      'cPanel Control Panel',
+    76→      'Daily Backup',
+    77→      '99.9% Uptime Guarantee',
+    78→    ],
+    79→    excluded: ['Free Domain', 'Priority Support', 'Dedicated IP'],
+    80→  },
+    81→  {
+    82→    name: 'Business',
+    83→    price: '69.900',
+    84→    period: '/bulan',
+    85→    description: 'Ideal untuk bisnis UMKM dan toko online.',
+    86→    popular: true,
+    87→    features: [
+    88→      '5 GB SSD Storage',
+    89→      '50 GB Bandwidth',
+    90→      '5 Website',
+    91→      '10 Email Accounts',
+    92→      'SSL Gratis (Let\'s Encrypt)',
+    93→      'cPanel Control Panel',
+    94→      'Daily Backup',
+    95→      '99.9% Uptime Guarantee',
+    96→      'Free Domain .com/.id (1 tahun)',
+    97→      'Priority Support (WhatsApp)',
+    98→    ],
+    99→    excluded: ['Dedicated IP'],
+   100→  },
+   101→  {
+   102→    name: 'Premium',
+   103→    price: '149.900',
+   104→    period: '/bulan',
+   105→    description: 'Untuk bisnis besar, e-commerce, dan traffic tinggi.',
+   106→    popular: false,
+   107→    features: [
+   108→      '15 GB SSD Storage',
+   109→      'Unlimited Bandwidth',
+   110→      'Unlimited Website',
+   111→      'Unlimited Email',
+   112→      'SSL Gratis (Let\'s Encrypt)',
+   113→      'cPanel Control Panel',
+   114→      'Daily & Weekly Backup',
+   115→      '99.9% Uptime Guarantee',
+   116→      'Free Domain .com/.id (1 tahun)',
+   117→      'Priority Support (WhatsApp)',
+   118→      'Dedicated IP',
+   119→      'Free SSL Wildcard',
+   120→    ],
+   121→    excluded: [],
+   122→  },
+   123→];
+   124→
+   125→const features = [
+   126→  { icon: Server, title: 'Server Performa Tinggi', desc: 'Dengan Intel Xeon processor dan NVMe SSD, website Anda loading super cepat.' },
+   127→  { icon: Shield, title: 'Keamanan 24/7', desc: 'Proteksi DDoS, firewall canggih, dan malware scanner untuk keamanan data Anda.' },
+   128→  { icon: Zap, title: 'LiteSpeed Web Server', desc: 'Teknologi LiteSpeed memberikan performa 2-6x lebih cepat dari Apache.' },
+   129→  { icon: Clock, title: 'Uptime 99.9%', desc: 'Jaminan uptime 99.9% dengan monitoring server 24 jam non-stop.' },
+   130→  { icon: Globe, title: 'Server Indonesia', desc: 'Lokasi server Jakarta & Singapore untuk akses tercepat dari Indonesia.' },
+   131→  { icon: Headphones, title: 'Support Responsif', desc: 'Tim support siap membantu via WhatsApp, email, dan tiket 24/7.' },
+   132→  { icon: Database, title: 'Auto Backup Harian', desc: 'Backup otomatis setiap hari. Data Anda aman dan bisa di-restore kapan saja.' },
+   133→  { icon: Lock, title: 'SSL Gratis', desc: 'Sertifikat SSL gratis untuk setiap domain. Website Anda aman dan terpercaya.' },
+   134→];
+   135→
+   136→const stats = [
+   137→  { value: '2,500+', label: 'Website Aktif', icon: Globe },
+   138→  { value: '99.9%', label: 'Uptime', icon: TrendingUp },
+   139→  { value: '1,800+', label: 'Pelanggan Puas', icon: Users },
+   140→  { value: '24/7', label: 'Support Online', icon: Headphones },
+   141→];
+   142→
+   143→const faqs = [
+   144→  {
+   145→    q: 'Apa itu shared hosting?',
+   146→    a: 'Shared hosting adalah layanan hosting di mana satu server fisik digunakan bersama oleh banyak pengguna. Setiap pengguna mendapat alokasi resource tertentu (disk space, bandwidth, dll) yang terpisah dan aman. Ini adalah pilihan paling ekonomis untuk memulai website.',
+   147→  },
+   148→  {
+   149→    q: 'Berapa lama proses aktivasi akun hosting?',
+   150→    a: 'Akun hosting Anda akan aktif secara otomatis setelah pembayaran dikonfirmasi. Untuk pembayaran via transfer bank, proses konfirmasi biasanya memakan waktu 5-15 menit pada jam kerja (08.00 - 22.00 WIB).',
+   151→  },
+   152→  {
+   153→    q: 'Apakah saya bisa upgrade paket kapan saja?',
+   154→    a: 'Ya! Anda bisa upgrade paket kapan saja tanpa downtime. Biaya upgrade akan dihitung secara prorata berdasarkan sisa waktu paket saat ini. Cukup hubungi tim support kami via WhatsApp.',
+   155→  },
+   156→  {
+   157→    q: 'Apa yang terjadi jika melebihi batas bandwidth?',
+   158→    a: 'Jika bandwidth habis, website Anda tetap online namun aksesnya akan dibatasi. Kami akan mengirim notifikasi saat bandwidth mendekati batas (80%). Anda bisa upgrade paket atau membeli add-on bandwidth tambahan.',
+   159→  },
+   160→  {
+   161→    q: 'Apakah ada garansi uang kembali?',
+   162→    a: 'Ya, kami memberikan garansi uang kembali 100% dalam 7 hari pertama jika Anda tidak puas dengan layanan kami. Tidak ada pertanyaan, tidak ada ribet.',
+   163→  },
+   164→  {
+   165→    q: 'Apakah bisa menggunakan domain dari registrar lain?',
+   166→    a: 'Tentu saja! Anda bisa menggunakan domain dari registrar mana saja. Cukup arahkan nameserver domain Anda ke nameserver kami. Kami juga menyediakan panduan step-by-step untuk proses ini.',
+   167→  },
+   168→  {
+   169→    q: 'Bagaimana jika saya butuh bantuan migrasi website?',
+   170→    a: 'Kami menyediakan layanan migrasi GRATIS untuk pelanggan baru. Tim teknis kami akan memindahkan seluruh file, database, dan email dari hosting lama Anda. Proses biasanya selesai dalam 1-24 jam.',
+   171→  },
+   172→];
+   173→
+   174→const navLinks = [
+   175→  { label: 'Beranda', href: '#hero' },
+   176→  { label: 'Fitur', href: '#features' },
+   177→  { label: 'Paket Harga', href: '#pricing' },
+   178→  { label: 'FAQ', href: '#faq' },
+   179→  { label: 'Kontak', href: '#contact' },
+   180→];
+   181→
+   182→// ==================== ANIMATIONS ====================
+   183→
+   184→const fadeUp = {
+   185→  hidden: { opacity: 0, y: 30 },
+   186→  visible: (i: number) => ({
+   187→    opacity: 1,
+   188→    y: 0,
+   189→    transition: { delay: i * 0.1, duration: 0.6, ease: 'easeOut' },
+   190→  }),
+   191→};
+   192→
+   193→const stagger = {
+   194→  visible: { transition: { staggerChildren: 0.08 } },
+   195→};
+   196→
+   197→// ==================== COMPONENTS ====================
+   198→
+   199→function Navbar() {
+   200→  const [scrolled, setScrolled] = useState(false);
+   201→  const obileOpen, setMobileOpen] = useState(false);
+   202→
+   203→  useEffect(() => {
+   204→    const handler = () => setScrolled(window.scrollY > 20);
+   205→    window.addEventListener('scroll', handler);
+   206→    return () => window.removeEventListener('scroll', handler);
+   207→  }, []);
+   208→
+   209→  return (
+   210→    <motion.nav
+   211→      initial={{ y: -100 }}
+   212→      animate={{ y: 0 }}
+   213→      transition={{ duration: 0.5 }}
+   214→      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+   215→        scrolled
+   216→          ? 'bg-background/80 backdrop-blur-xl border-b border-border shadow-sm'
+   217→          : 'bg-transparent'
+   218→      }`}
+   219→    >
+   220→      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+   221→        <div className="flex items-center justify-between h-16 sm:h-20">
+   222→          {/* Logo */}
+   223→          <a href="#hero" className="flex items-center gap-2">
+   224→            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
+   225→              <Server className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+   226→            </div>
+   227→            <span className="text-lg sm:text-xl font-bold text-foreground">
+   228→              zaydcluster<span className="text-emerald-500">.com</span>
+   229→            </span>
+   230→          </a>
+   231→
+   232→          {/* Desktop Nav */}
+   233→          <div className="hidden md:flex items-center gap-1">
+   234→            {navLinks.map((link) => (
+   235→              <a
+   236→                key={link.href}
+   237→                href={link.href}
+   238→                className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted/50"
+   239→              >
+   240→                {link.label}
+   241→              </a>
+   242→            ))}
+   243→            <Button asChild size="sm" className="ml-3 bg-emerald-500 hover:bg-emerald-600 text-white">
+   244→              <a href="#pricing">
+   245→                Pesan Sekarang
+   246→              </a>
+   247→            </Button>
+   248→          </div>
+   249→
+   250→          {/* Mobile menu */}
+   251→          <div className="md:hidden">
+   252→            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+   253→              <SheetTrigger asChild>
+   254→                <Button variant="ghost" size="icon">
+   255→                  <Menu className="w-6 h-6" />
+   256→                </Button>
+   257→              </SheetTrigger>
+   258→              <SheetContent side="right" className="w-72">
+   259→                <SheetHeader>
+   260→                  <SheetTitle className="flex items-center gap-2">
+   261→                    <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
+   262→                      <Server className="w-5 h-5 text-white" />
+   263→                    </div>
+   264→                    <span className="font-bold text-foreground">
+   265→                      zaydcluster<span className="text-emerald-500">.com</span>
+   266→                    </span>
+   267→                  </SheetTitle>
+   268→                </SheetHeader>
+   269→                <SheetDescription className="sr-only">Navigation menu</SheetDescription>
+   270→                <div className="flex flex-col gap-2 mt-8">
+   271→                  {navLinks.map((link) => (
+   272→                    <a
+   273→                      key={link.href}
+   274→                      href={link.href}
+   275→                      onClick={() => setMobileOpen(false)}
+   276→                      className="px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+   277→                    >
+   278→                      {link.label}
+   279→                    </a>
+   280→                  ))}
+   281→                  <Separator className="my-2" />
+   282→                  <Button asChild className="bg-emerald-500 hover:bg-emerald-600 text-white w-full mt-2">
+   283→                    <a href="#pricing" onClick={() => setMobileOpen(false)}>
+   284→                      Pesan Sekarang
+   285→                    </a>
+   286→                  </Button>
+   287→                </div>
+   288→              </SheetContent>
+   289→            </Sheet>
+   290→          </div>
+   291→        </div>
+   292→      </div>
+   293→    </motion.nav>
+   294→  );
+   295→}
+   296→
+   297→function HeroSection() {
+   298→  return (
+   299→    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden">
+   300→      {/* Background gradient */}
+   301→      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-emerald-950/20" />
+   302→      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
+   303→      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
+   304→
+   305→      {/* Grid pattern overlay */}
+   306→      <div
+   307→        className="absolute inset-0 opacity-[0.03]"
+   308→        style={{
+   309→          backgroundImage: `linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px),
+   310→            linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)`,
+   311→          backgroundSize: '60px 60px',
+   312→        }}
+   313→      />
+   314→
+   315→      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-32">
+   316→        <motion.div
+   317→          initial="hidden"
+   318→          animate="visible"
+   319→          variants={stagger}
+   320→          className="max-w-4xl mx-auto"
+   321→        >
+   322→          <motion.div variants={fadeUp} custom={0}>
+   323→            <Badge variant="outline" className="mb-6 px-4 py-1.5 text-emerald-400 border-emerald-500/30 bg-emerald-500/5">
+   324→              <Zap className="w-3.5 h-3.5 mr-1.5" />
+   325→              Promo Diskon 50% untuk 3 Bulan Pertama
+   326→            </Badge>
+   327→          </motion.div>
+   328→
+   329→          <motion.h1
+   330→            variants={fadeUp}
+   331→            custom={1}
+   332→            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-tight"
+   333→          >
+   334→            Hosting Website{' '}
+   335→            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">
+   336→              Super Cepat
+   337→            </span>{' '}
+   338→            & Terpercaya
+   339→          </motion.h1>
+   340→
+   341→          <motion.p
+   342→            variants={fadeUp}
+   343→            custom={2}
+   344→            className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+   345→          >
+   346→            Layanan shared hosting berkualitas tinggi dengan server Indonesia,
+   347→            support 24/7, dan harga terjangkau. Mulai dari{' '}
+   348→            <span className="text-foreground font-semibold">Rp 29.900/bulan</span>.
+   349→          </motion.p>
+   350→
+   351→          <motion.div
+   352→            variants={fadeUp}
+   353→            custom={3}
+   354→            className="mt-10 flex flex-col sm:flex-row gap-4 justify-center"
+   355→          >
+   356→            <Button
+   357→              asChild
+   358→              size="lg"
+   359→              className="bg-emerald-500 hover:bg-emerald-600 text-white text-base px-8 h-12 shadow-lg shadow-emerald-500/25"
+   360→            >
+   361→              <a href="#pricing">
+   362→                Lihat Paket Harga
+   363→                <ArrowRight className="ml-2 w-4 h-4" />
+   364→              </a>
+   365→            </Button>
+   366→            <Button
+   367→              asChild
+   368→              variant="outline"
+   369→              size="lg"
+   370→              className="text-base px-8 h-12"
+   371→            >
+   372→              <a href="#contact">
+   373→                <MessageCircle className="mr-2 w-4 h-4" />
+   374→                Hubungi Kami
+   375→              </a>
+   376→            </Button>
+   377→          </motion.div>
+   378→
+   379→          <motion.div
+   380→            variants={fadeUp}
+   381→            custom={4}
+   382→            className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground"
+   383→          >
+   384→            <div className="flex items-center gap-2">
+   385→              <Check className="w-4 h-4 text-emerald-500" />
+   386→              <span>Tanpa Setup Fee</span>
+   387→            </div>
+   388→            <div className="flex items-center gap-2">
+   389→              <Check className="w-4 h-4 text-emerald-500" />
+   390→              <span>Gratis Migrasi</span>
+   391→            </div>
+   392→            <div className="flex items-center gap-2">
+   393→              <Check className="w-4 h-4 text-emerald-500" />
+   394→              <span>Garansi 7 Hari</span>
+   395→            </div>
+   396→            <div className="flex items-center gap-2">
+   397→              <Check className="w-4 h-4 text-emerald-500" />
+   398→              <span>SSL Gratis</span>
+   399→            </div>
+   400→          </motion.div>
+   401→        </motion.div>
+   402→      </div>
+   403→    </section>
+   404→  );
+   405→}
+   406→
+   407→function StatsSection() {
+   408→  return (
+   409→    <section className="relative py-16 sm:py-20 bg-muted/30 border-y border-border">
+   410→      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+   411→        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
+   412→          {stats.map((stat, i) => (
+   413→            <motion.div
+   414→              key={stat.label}
+   415→              initial="hidden"
+   416→              whileInView="visible"
+   417→              viewport={{ once: true, margin: '-50px' }}
+   418→              variants={fadeUp}
+   419→              custom={i}
+   420→              className="text-center"
+   421→            >
+   422→              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-500/10 mb-4">
+   423→                <stat.icon className="w-6 h-6 text-emerald-500" />
+   424→              </div>
+   425→              <div className="text-3xl sm:text-4xl font-bold text-foreground">{stat.value}</div>
+   426→              <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
+   427→            </motion.div>
+   428→          ))}
+   429→        </div>
+   430→      </div>
+   431→    </section>
+   432→  );
+   433→}
+   434→
+   435→function FeaturesSection() {
+   436→  return (
+   437→    <section id="features" className="py-20 sm:py-28">
+   438→      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+   439→        <motion.div
+   440→          initial="hidden"
+   441→          whileInView="visible"
+   442→          viewport={{ once: true, margin: '-50px' }}
+   443→          variants={stagger}
+   444→          className="text-center mb-16"
+   445→        >
+   446→          <motion.div variants={fadeUp} custom={0}>
+   447→            <Badge variant="outline" className="mb-4 px-4 py-1.5 text-emerald-400 border-emerald-500/30 bg-emerald-500/5">
+   448→              Kenapa zaydcluster.com?
+   449→            </Badge>
+   450→          </motion.div>
+   451→          <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground">
+   452→            Fitur Unggulan Kami
+   453→          </motion.h2>
+   454→          <motion.p variants={fadeUp} custom={2} className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+   455→            Kami menyediakan infrastruktur hosting terbaik untuk memastikan website Anda selalu online, cepat, dan aman.
+   456→          </motion.p>
+   457→        </motion.div>
+   458→
+   459→        <motion.div
+   460→          initial="hidden"
+   461→          whileInView="visible"
+   462→          viewport={{ once: true, margin: '-50px' }}
+   463→          variants={stagger}
+   464→          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+   465→        >
+   466→          {features.map((feature, i) => (
+   467→            <motion.div key={feature.title} variants={fadeUp} custom={i}>
+   468→              <Card className="h-full bg-card border-border hover:border-emerald-500/30 transition-all duration-300 group hover:shadow-lg hover:shadow-emerald-500/5">
+   469→                <CardHeader>
+   470→                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-3 group-hover:bg-emerald-500/20 transition-colors">
+   471→                    <feature.icon className="w-6 h-6 text-emerald-500" />
+   472→                  </div>
+   473→                  <CardTitle className="text-lg">{feature.title}</CardTitle>
+   474→                </CardHeader>
+   475→                <CardContent>
+   476→                  <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
+   477→                </CardContent>
+   478→              </Card>
+   479→            </motion.div>
+   480→          ))}
+   481→        </motion.div>
+   482→      </div>
+   483→    </section>
+   484→  );
+   485→}
+   486→
+   487→function PricingSection() {
+   488→  const [orderOpen, setOrderOpen] = useState(false);
+   489→  const [orderSuccess, setOrderSuccess] = useState<{orderNumber: string; invoiceNumber: string; isNewUser: boolean} | null>(null);
+   490→  const [selectedPkg, setSelectedPkg] = useState('');
+   491→
+   492→  const openOrder = (pkg: string) => {
+   493→    setSelectedPkg(pkg);
+   494→    setOrderOpen(true);
+   495→  };
+   496→
+   497→  return (
+   498→    <section id="pricing" className="py-20 sm:py-28 bg-muted/30">
+   499→      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+   500→        <motion.div
+   501→          initial="hidden"
+   502→          whileInView="visible"
+   503→          viewport={{ once: true, margin: '-50px' }}
+   504→          variants={stagger}
+   505→          className="text-center mb-16"
+   506→        >
+   507→          <motion.div variants={fadeUp} custom={0}>
+   508→            <Badge variant="outline" className="mb-4 px-4 py-1.5 text-emerald-400 border-emerald-500/30 bg-emerald-500/5">
+   509→              Paket Harga
+   510→            </Badge>
+   511→          </motion.div>
+   512→          <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground">
+   513→            Pilih Paket yang Tepat
+   514→          </motion.h2>
+   515→          <motion.p variants={fadeUp} custom={2} className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+   516→            Semua paket sudah termasuk cPanel, SSL gratis, dan support 24/7. Tanpa biaya tersembunyi.
+   517→          </motion.p>
+   518→        </motion.div>
+   519→
+   520→        <motion.div
+   521→          initial="hidden"
+   522→          whileInView="visible"
+   523→          viewport={{ once: true, margin: '-50px' }}
+   524→          variants={stagger}
+   525→          className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto"
+   526→        >
+   527→          {packages.map((pkg, i) => (
+   528→            <motion.div key={pkg.name} variants={fadeUp} custom={i} className="relative">
+   529→              {pkg.popular && (
+   530→                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+   531→                  <Badge className="bg-emerald-500 text-white px-4 py-1 shadow-lg shadow-emerald-500/30">
+   532→                    <Star className="w-3.5 h-3.5 mr-1" />
+   533→                    Paling Populer
+   534→                  </Badge>
+   535→                </div>
+   536→              )}
+   537→              <Card
+   538→                className={`h-full flex flex-col ${
+   539→                  pkg.popular
+   540→                    ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10 scale-[1.02]'
+   541→                    : 'border-border'
+   542→                }`}
+   543→              >
+   544→                <CardHeader className="text-center pb-2">
+   545→                  <CardTitle className="text-xl">{pkg.name}</CardTitle>
+   546→                  <CardDescription className="mt-1">{pkg.description}</CardDescription>
+   547→                  <div className="mt-6">
+   548→                    <span className="text-sm text-muted-foreground">Rp</span>
+   549→                    <span className="text-4xl sm:text-5xl font-bold text-foreground mx-1">{pkg.price}</span>
+   550→                    <span className="text-sm text-muted-foreground">{pkg.period}</span>
+   551→                  </div>
+   552→                  <p className="text-xs text-muted-foreground mt-2">
+   553→                    atau Rp {(parseInt(pkg.price.replace(/\./g, '')) * 10).toLocaleString('id-ID')}/tahun (hemat 2 bulan)
+   554→                  </p>
+   555→                </CardHeader>
+   556→                <CardContent className="flex-1 pt-4">
+   557→                  <Separator className="mb-4" />
+   558→                  <ul className="space-y-3">
+   559→                    {pkg.features.map((feat) => (
+   560→                      <li key={feat} className="flex items-start gap-2.5 text-sm">
+   561→                        <Check className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+   562→                        <span className="text-foreground">{feat}</span>
+   563→                      </li>
+   564→                    ))}
+   565→                    {pkg.excluded.map((feat) => (
+   566→                      <li key={feat} className="flex items-start gap-2.5 text-sm">
+   567→                        <X className="w-4 h-4 text-muted-foreground/40 mt-0.5 shrink-0" />
+   568→                        <span className="text-muted-foreground/50">{feat}</span>
+   569→                      </li>
+   570→                    ))}
+   571→                  </ul>
+   572→                </CardContent>
+   573→                <CardFooter className="pt-4">
+   574→                  <Button
+   575→                    onClick={() => openOrder(pkg.name)}
+   576→                    className={`w-full h-11 ${
+   577→                      pkg.popular
+   578→                        ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/25'
+   579→                        : 'bg-foreground hover:bg-foreground/90 text-background'
+   580→                    }`}
+   581→                  >
+   582→                    Pesan {pkg.name}
+   583→                    <ChevronRight className="ml-2 w-4 h-4" />
+   584→                  </Button>
+   585→                </CardFooter>
+   586→              </Card>
+   587→            </motion.div>
+   588→          ))}
+   589→        </motion.div>
+   590→
+   591→        {/* Order Dialog */}
+   592→        <AnimatePresence>
+   593→          {orderOpen && (
+   594→            <OrderDialog
+   595→              selectedPkg={selectedPkg}
+   596→              onClose={() => setOrderOpen(false)}
+   597→              onSuccess={(data) => {
+   598→                setOrderOpen(false);
+   599→                if (data.setupToken) {
+   600→                  window.location.href = `/set-password?token=${data.setupToken}`;
+   601→                } else {
+   602→                  window.location.href = `/login?registered=true`;
+   603→                }
+   604→              }}
+   605→            />
+   606→          )}
+   607→        </AnimatePresence>
+   608→
+   609→        {/* Order Success Modal */}
+   610→        <AnimatePresence>
+   611→          {orderSuccess && (
+   612→            <motion.div
+   613→              initial={{ opacity: 0 }}
+   614→              animate={{ opacity: 1 }}
+   615→              exit={{ opacity: 0 }}
+   616→              className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+   617→              onClick={() => setOrderSuccess(null)}
+   618→            >
+   619→              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+   620→              <motion.div
+   621→                initial={{ scale: 0.95, opacity: 0 }}
+   622→                animate={{ scale: 1, opacity: 1 }}
+   623→                exit={{ scale: 0.95, opacity: 0 }}
+   624→                className="relative w-full max-w-lg bg-card border border-border rounded-2xl shadow-2xl"
+   625→                onClick={(e) => e.stopPropagation()}
+   626→              >
+   627→                <div className="p-6 sm:p-8 text-center">
+   628→                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+   629→                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+   630→                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+   631→                    </svg>
+   632→                  </div>
+   633→                  <h3 className="text-xl font-bold text-foreground mb-2">Pesanan Berhasil!</h3>
+   634→                  <p className="text-muted-foreground mb-4">Terima kasih! Pesanan Anda sedang diproses.</p>
+   635→
+   636→                  <div className="bg-muted/50 rounded-lg p-4 mb-4 text-left space-y-2">
+   637→                    <div className="flex justify-between text-sm">
+   638→                      <span className="text-muted-foreground">No. Pesanan:</span>
+   639→                      <span className="font-mono font-medium">{orderSuccess.orderNumber}</span>
+   640→                    </div>
+   641→                    <div className="flex justify-between text-sm">
+   642→                      <span className="text-muted-foreground">No. Invoice:</span>
+   643→                      <span className="font-mono font-medium">{orderSuccess.invoiceNumber}</span>
+   644→                    </div>
+   645→                  </div>
+   646→
+   647→                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+   648→                    <p className="text-sm text-blue-800 font-medium mb-2">Langkah Selanjutnya:</p>
+   649→                    <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+   650→                      <li>Cek email Anda untuk <strong>link atur password</strong></li>
+   651→                      <li>Klik link tersebut dan buat password baru</li>
+   652→                      <li>Login ke client area dengan email dan password baru</li>
+   653→                      <li>Bayar invoice untuk mengaktifkan layanan</li>
+   654→                    </ol>
+   655→                  </div>
+   656→
+   657→                  <div className="flex flex-col sm:flex-row gap-3">
+   658→                    <a
+   659→                      href="/login"
+   660→                      className="flex-1 inline-flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+   661→                    >
+   662→                      Login ke Akun
+   663→                    </a>
+   664→                    <button
+   665→                      onClick={() => setOrderSuccess(null)}
+   666→                      className="flex-1 py-2 px-4 border border-border rounded-md text-sm font-medium text-foreground hover:bg-muted"
+   667→                    >
+   668→                      Kembali ke Website
+   669→                    </button>
+   670→                  </div>
+   671→                </div>
+   672→              </motion.div>
+   673→            </motion.div>
+   674→          )}
+   675→        </AnimatePresence>
+   676→      </div>
+   677→    </section>
+   678→  );
+   679→}
+   680→
+   681→function OrderDialog({ selectedPkg, onClose, onSuccess }: { selectedPkg: string; onClose: () => void; onSuccess: (data: { orderNumber: string; invoiceNumber: string; isNewUser: boolean; setupToken?: string | null }) => void }) {
+   682→  const [loading, setLoading] = useState(false);
+   683→  const [formData, setFormData] = useState({
+   684→    name: '',
+   685→    email: '',
+   686→    phone: '',
+   687→    package: selectedPkg,
+   688→    billingCycle: 'monthly',
+   689→    domain: '',
+   690→    message: '',
+   691→  });
+   692→
+   693→  const handleSubmit = async (e: React.FormEvent) => {
+   694→    e.preventDefault();
+   695→    setLoading(true);
+   696→    try {
+   697→      const res = await fetch('/api/order', {
+   698→        method: 'POST',
+   699→        headers: { 'Content-Type': 'application/json' },
+   700→        body: JSON.stringify(formData),
+   701→      });
+   702→      const data = await res.json();
+   703→      if (data.success) {
+   704→        toast.success(data.message);
+   705→        onSuccess({
+   706→          orderNumber: data.orderNumber,
+   707→          invoiceNumber: data.invoiceNumber,
+   708→          isNewUser: data.isNewUser,
+   709→          setupToken: data.setupToken,
+   710→        });
+   711→        setFormData({ name: '', email: '', phone: '', package: selectedPkg, billingCycle: 'monthly', domain: '', message: '' });
+   712→      } else {
+   713→        toast.error(data.message);
+   714→      }
+   715→    } catch {
+   716→      toast.error('Terjadi kesalahan jaringan. Silakan coba lagi.');
+   717→    } finally {
+   718→      setLoading(false);
+   719→    }
+   720→  };
+   721→
+   722→  return (
+   723→    <motion.div
+   724→      initial={{ opacity: 0 }}
+   725→      animate={{ opacity: 1 }}
+   726→      exit={{ opacity: 0 }}
+   727→      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+   728→      onClick={onClose}
+   729→    >
+   730→      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+   731→      <motion.div
+   732→        initial={{ scale: 0.95, opacity: 0 }}
+   733→        animate={{ scale: 1, opacity: 1 }}
+   734→        exit={{ scale: 0.95, opacity: 0 }}
+   735→        className="relative w-full max-w-lg bg-card border border-border rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
+   736→        onClick={(e) => e.stopPropagation()}
+   737→      >
+   738→        <div className="p-6 sm:p-8">
+   739→          <div className="flex items-center justify-between mb-6">
+   740→            <h3 className="text-xl font-bold text-foreground">Pesan Paket Hosting</h3>
+   741→            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+   742→              <X className="w-4 h-4" />
+   743→            </Button>
+   744→          </div>
+   745→
+   746→          <form onSubmit={handleSubmit} className="space-y-4">
+   747→            <div className="space-y-2">
+   748→              <Label htmlFor="name">Nama Lengkap *</Label>
+   749→              <Input
+   750→                id="name"
+   751→                placeholder="Masukkan nama lengkap"
+   752→                value={formData.name}
+   753→                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+   754→                required
+   755→              />
+   756→            </div>
+   757→
+   758→            <div className="space-y-2">
+   759→              <Label htmlFor="email">Email *</Label>
+   760→              <Input
+   761→                id="email"
+   762→                type="email"
+   763→                placeholder="nama@email.com"
+   764→                value={formData.email}
+   765→                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+   766→                required
+   767→              />
+   768→            </div>
+   769→
+   770→            <div className="space-y-2">
+   771→              <Label htmlFor="phone">Nomor WhatsApp *</Label>
+   772→              <Input
+   773→                id="phone"
+   774→                type="tel"
+   775→                placeholder="08xxxxxxxxxx"
+   776→                value={formData.phone}
+   777→                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+   778→                required
+   779→              />
+   780→            </div>
+   781→
+   782→            <div className="space-y-2">
+   783→              <Label htmlFor="package">Paket Hosting *</Label>
+   784→              <Select
+   785→                value={formData.package}
+   786→                onValueChange={(val) => setFormData({ ...formData, package: val })}
+   787→              >
+   788→                <SelectTrigger>
+   789→                  <SelectValue />
+   790→                </SelectTrigger>
+   791→                <SelectContent>
+   792→                  {packages.map((p) => (
+   793→                    <SelectItem key={p.name} value={p.name}>
+   794→                      {p.name} - Rp {p.price}/bulan
+   795→                    </SelectItem>
+   796→                  ))}
+   797→                </SelectContent>
+   798→              </Select>
+   799→            </div>
+   800→
+   801→            <div className="space-y-2">
+   802→              <Label htmlFor="domain">Domain (opsional)</Label>
+   803→              <Input
+   804→                id="domain"
+   805→                placeholder="namadomain.com"
+   806→                value={formData.domain}
+   807→                onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
+   808→              />
+   809→            </div>
+   810→
+   811→            <div className="space-y-2">
+   812→              <Label htmlFor="message">Pesan Tambahan (opsional)</Label>
+   813→              <Textarea
+   814→                id="message"
+   815→                placeholder="Catatan atau permintaan khusus..."
+   816→                rows={3}
+   817→                value={formData.message}
+   818→                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+   819→              />
+   820→            </div>
+   821→
+   822→            <Button
+   823→              type="submit"
+   824→              disabled={loading}
+   825→              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white h-11"
+   826→            >
+   827→              {loading ? (
+   828→                <div className="flex items-center gap-2">
+   829→                  <RefreshCw className="w-4 h-4 animate-spin" />
+   830→                  Memproses...
+   831→                </div>
+   832→              ) : (
+   833→                <div className="flex items-center gap-2">
+   834→                  <Send className="w-4 h-4" />
+   835→                  Kirim Pesanan
+   836→                </div>
+   837→              )}
+   838→            </Button>
+   839→          </form>
+   840→        </div>
+   841→      </motion.div>
+   842→    </motion.div>
+   843→  );
+   844→}
+   845→
+   846→function FAQSection() {
+   847→  return (
+   848→    <section id="faq" className="py-20 sm:py-28">
+   849→      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+   850→        <motion.div
+   851→          initial="hidden"
+   852→          whileInView="visible"
+   853→          viewport={{ once: true, margin: '-50px' }}
+   854→          variants={stagger}
+   855→          className="text-center mb-16"
+   856→        >
+   857→          <motion.div variants={fadeUp} custom={0}>
+   858→            <Badge variant="outline" className="mb-4 px-4 py-1.5 text-emerald-400 border-emerald-500/30 bg-emerald-500/5">
+   859→              FAQ
+   860→            </Badge>
+   861→          </motion.div>
+   862→          <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground">
+   863→            Pertanyaan yang Sering Diajukan
+   864→          </motion.h2>
+   865→          <motion.p variants={fadeUp} custom={2} className="mt-4 text-lg text-muted-foreground">
+   866→            Belum menemukan jawaban? Hubungi kami via WhatsApp.
+   867→          </motion.p>
+   868→        </motion.div>
+   869→
+   870→        <motion.div
+   871→          initial="hidden"
+   872→          whileInView="visible"
+   873→          viewport={{ once: true, margin: '-50px' }}
+   874→          variants={stagger}
+   875→        >
+   876→          <Accordion type="single" collapsible className="space-y-3">
+   877→            {faqs.map((faq, i) => (
+   878→              <motion.div key={i} variants={fadeUp} custom={i}>
+   879→                <AccordionItem value={`faq-${i}`} className="border border-border rounded-xl px-6 data-[state=open]:bg-muted/30 transition-colors">
+   880→                  <AccordionTrigger className="text-left text-base py-5 hover:no-underline">
+   881→                    {faq.q}
+   882→                  </AccordionTrigger>
+   883→                  <AccordionContent className="text-muted-foreground leading-relaxed pb-5">
+   884→                    {faq.a}
+   885→                  </AccordionContent>
+   886→                </AccordionItem>
+   887→              </motion.div>
+   888→            ))}
+   889→          </Accordion>
+   890→        </motion.div>
+   891→      </div>
+   892→    </section>
+   893→  );
+   894→}
+   895→
+   896→function ContactSection() {
+   897→  const [loading, setLoading] = useState(false);
+   898→  const [formData, setFormData] = useState({
+   899→    name: '',
+   900→    email: '',
+   901→    phone: '',
+   902→    subject: '',
+   903→    message: '',
+   904→  });
+   905→
+   906→  const handleSubmit = async (e: React.FormEvent) => {
+   907→    e.preventDefault();
+   908→    setLoading(true);
+   909→    try {
+   910→      const res = await fetch('/api/contact', {
+   911→        method: 'POST',
+   912→        headers: { 'Content-Type': 'application/json' },
+   913→        body: JSON.stringify(formData),
+   914→      });
+   915→      const data = await res.json();
+   916→      if (data.success) {
+   917→        toast.success(data.message);
+   918→        setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+   919→      } else {
+   920→        toast.error(data.message);
+   921→      }
+   922→    } catch {
+   923→      toast.error('Terjadi kesalahan jaringan. Silakan coba lagi.');
+   924→    } finally {
+   925→      setLoading(false);
+   926→    }
+   927→  };
+   928→
+   929→  return (
+   930→    <section id="contact" className="py-20 sm:py-28 bg-muted/30">
+   931→      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+   932→        <motion.div
+   933→          initial="hidden"
+   934→          whileInView="visible"
+   935→          viewport={{ once: true, margin: '-50px' }}
+   936→          variants={stagger}
+   937→          className="text-center mb-16"
+   938→        >
+   939→          <motion.div variants={fadeUp} custom={0}>
+   940→            <Badge variant="outline" className="mb-4 px-4 py-1.5 text-emerald-400 border-emerald-500/30 bg-emerald-500/5">
+   941→              Hubungi Kami
+   942→            </Badge>
+   943→          </motion.div>
+   944→          <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground">
+   945→            Butuh Bantuan?
+   946→          </motion.h2>
+   947→          <motion.p variants={fadeUp} custom={2} className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+   948→            Tim support kami siap membantu Anda 24/7. Jangan ragu untuk menghubungi kami.
+   949→          </motion.p>
+   950→        </motion.div>
+   951→
+   952→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto">
+   953→          {/* Contact Info */}
+   954→          <motion.div
+   955→            initial="hidden"
+   956→            whileInView="visible"
+   957→            viewport={{ once: true, margin: '-50px' }}
+   958→            variants={stagger}
+   959→            className="space-y-6"
+   960→          >
+   961→            <motion.div variants={fadeUp} custom={0}>
+   962→              <Card className="border-border">
+   963→                <CardContent className="p-6">
+   964→                  <div className="flex items-start gap-4">
+   965→                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+   966→                      <MessageCircle className="w-6 h-6 text-emerald-500" />
+   967→                    </div>
+   968→                    <div>
+   969→                      <h3 className="font-semibold text-foreground">WhatsApp</h3>
+   970→                      <p className="text-sm text-muted-foreground mt-1">Respon tercepat, biasanya dalam hitungan menit.</p>
+   971→                      <a
+   972→                        href="https://wa.me/6281234567890"
+   973→                        target="_blank"
+   974→                        rel="noopener noreferrer"
+   975→                        className="inline-flex items-center gap-1.5 mt-3 text-sm text-emerald-500 hover:text-emerald-400 transition-colors"
+   976→                      >
+   977→                        +62 812-3456-7890
+   978→                        <ExternalLink className="w-3.5 h-3.5" />
+   979→                      </a>
+   980→                    </div>
+   981→                  </div>
+   982→                </CardContent>
+   983→              </Card>
+   984→            </motion.div>
+   985→
+   986→            <motion.div variants={fadeUp} custom={1}>
+   987→              <Card className="border-border">
+   988→                <CardContent className="p-6">
+   989→                  <div className="flex items-start gap-4">
+   990→                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+   991→                      <Mail className="w-6 h-6 text-emerald-500" />
+   992→                    </div>
+   993→                    <div>
+   994→                      <h3 className="font-semibold text-foreground">Email</h3>
+   995→                      <p className="text-sm text-muted-foreground mt-1">Untuk tiket support dan pertanyaan detail.</p>
+   996→                      <a
+   997→                        href="mailto:support@zaydcluster.com"
+   998→                        className="inline-flex items-center gap-1.5 mt-3 text-sm text-emerald-500 hover:text-emerald-400 transition-colors"
+   999→                      >
+  1000→                        support@zaydcluster.com
+  1001→                        <ExternalLink className="w-3.5 h-3.5" />
+  1002→                      </a>
+  1003→                    </div>
+  1004→                  </div>
+  1005→                </CardContent>
+  1006→              </Card>
+  1007→            </motion.div>
+  1008→
+  1009→            <motion.div variants={fadeUp} custom={2}>
+  1010→              <Card className="border-border">
+  1011→                <CardContent className="p-6">
+  1012→                  <div className="flex items-start gap-4">
+  1013→                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+  1014→                      <MapPin className="w-6 h-6 text-emerald-500" />
+  1015→                    </div>
+  1016→                    <div>
+  1017→                      <h3 className="font-semibold text-foreground">Lokasi Server</h3>
+  1018→                      <p className="text-sm text-muted-foreground mt-1">
+  1019→                        Data center Jakarta (IIX) & Singapore. Latency rendah dari seluruh Indonesia.
+  1020→                      </p>
+  1021→                    </div>
+  1022→                  </div>
+  1023→                </CardContent>
+  1024→              </Card>
+  1025→            </motion.div>
+  1026→
+  1027→            <motion.div variants={fadeUp} custom={3}>
+  1028→              <Card className="border-border">
+  1029→                <CardContent className="p-6">
+  1030→                  <div className="flex items-start gap-4">
+  1031→                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+  1032→                      <Award className="w-6 h-6 text-emerald-500" />
+  1033→                    </div>
+  1034→                    <div>
+  1035→                      <h3 className="font-semibold text-foreground">Metode Pembayaran</h3>
+  1036→                      <p className="text-sm text-muted-foreground mt-1">
+  1037→                        Transfer Bank (BCA, Mandiri, BRI, BNI), QRIS, Virtual Account, E-Wallet (GoPay, OVO, DANA)
+  1038→                      </p>
+  1039→                    </div>
+  1040→                  </div>
+  1041→                </CardContent>
+  1042→              </Card>
+  1043→            </motion.div>
+  1044→          </motion.div>
+  1045→
+  1046→          {/* Contact Form */}
+  1047→          <motion.div
+  1048→            initial="hidden"
+  1049→            whileInView="visible"
+  1050→            viewport={{ once: true, margin: '-50px' }}
+  1051→            variants={fadeUp}
+  1052→            custom={2}
+  1053→          >
+  1054→            <Card className="border-border">
+  1055→              <CardHeader>
+  1056→                <CardTitle className="text-xl">Kirim Pesan</CardTitle>
+  1057→                <CardDescription>Isi form di bawah ini dan kami akan merespon dalam 1x24 jam.</CardDescription>
+  1058→              </CardHeader>
+  1059→              <CardContent>
+  1060→                <form onSubmit={handleSubmit} className="space-y-4">
+  1061→                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  1062→                    <div className="space-y-2">
+  1063→                      <Label htmlFor="c-name">Nama *</Label>
+  1064→                      <Input
+  1065→                        id="c-name"
+  1066→                        placeholder="Nama Anda"
+  1067→                        value={formData.name}
+  1068→                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+  1069→                        required
+  1070→                      />
+  1071→                    </div>
+  1072→                    <div className="space-y-2">
+  1073→                      <Label htmlFor="c-email">Email *</Label>
+  1074→                      <Input
+  1075→                        id="c-email"
+  1076→                        type="email"
+  1077→                        placeholder="email@contoh.com"
+  1078→                        value={formData.email}
+  1079→                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+  1080→                        required
+  1081→                      />
+  1082→                    </div>
+  1083→                  </div>
+  1084→
+  1085→                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  1086→                    <div className="space-y-2">
+  1087→                      <Label htmlFor="c-phone">No. HP (opsional)</Label>
+  1088→                      <Input
+  1089→                        id="c-phone"
+  1090→                        type="tel"
+  1091→                        placeholder="08xxxxxxxxxx"
+  1092→                        value={formData.phone}
+  1093→                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+  1094→                      />
+  1095→                    </div>
+  1096→                    <div className="space-y-2">
+  1097→                      <Label htmlFor="c-subject">Subjek *</Label>
+  1098→                      <Input
+  1099→                        id="c-subject"
+  1100→                        placeholder="Topik pesan"
+  1101→                        value={formData.subject}
+  1102→                        onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+  1103→                        required
+  1104→                      />
+  1105→                    </div>
+  1106→                  </div>
+  1107→
+  1108→                  <div className="space-y-2">
+  1109→                    <Label htmlFor="c-message">Pesan *</Label>
+  1110→                    <Textarea
+  1111→                      id="c-message"
+  1112→                      placeholder="Tulis pesan Anda di sini..."
+  1113→                      rows={5}
+  1114→                      value={formData.message}
+  1115→                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+  1116→                      required
+  1117→                    />
+  1118→                  </div>
+  1119→
+  1120→                  <Button
+  1121→                    type="submit"
+  1122→                    disabled={loading}
+  1123→                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white h-11"
+  1124→                  >
+  1125→                    {loading ? (
+  1126→                      <div className="flex items-center gap-2">
+  1127→                        <RefreshCw className="w-4 h-4 animate-spin" />
+  1128→                        Mengirim...
+  1129→                      </div>
+  1130→                    ) : (
+  1131→                      <div className="flex items-center gap-2">
+  1132→                        <Send className="w-4 h-4" />
+  1133→                        Kirim Pesan
+  1134→                      </div>
+  1135→                    )}
+  1136→                  </Button>
+  1137→                </form>
+  1138→              </CardContent>
+  1139→            </Card>
+  1140→          </motion.div>
+  1141→        </div>
+  1142→      </div>
+  1143→    </section>
+  1144→  );
+  1145→}
+  1146→
+  1147→function Footer() {
+  1148→  return (
+  1149→    <footer className="border-t border-border bg-background">
+  1150→      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+  1151→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+  1152→          {/* Brand */}
+  1153→          <div className="sm:col-span-2 lg:col-span-1">
+  1154→            <a href="#hero" className="flex items-center gap-2 mb-4">
+  1155→              <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
+  1156→                <Server className="w-5 h-5 text-white" />
+  1157→              </div>
+  1158→              <span className="text-lg font-bold text-foreground">
+  1159→                zaydcluster<span className="text-emerald-500">.com</span>
+  1160→              </span>
+  1161→            </a>
+  1162→            <p className="text-sm text-muted-foreground leading-relaxed">
+  1163→              Layanan shared hosting berkualitas tinggi dengan server Indonesia. Dipercaya oleh 1,800+ pelanggan.
+  1164→            </p>
+  1165→          </div>
+  1166→
+  1167→          {/* Layanan */}
+  1168→          <div>
+  1169→            <h4 className="font-semibold text-foreground mb-4">Layanan</h4>
+  1170→            <ul className="space-y-2.5">
+  1171→              {['Shared Hosting', 'Domain Registration', 'SSL Certificate', 'Website Migration', 'Managed Hosting'].map(
+  1172→                (item) => (
+  1173→                  <li key={item}>
+  1174→                    <a href="#pricing" className="text-sm text-muted-foreground hover:text-emerald-500 transition-colors">
+  1175→                      {item}
+  1176→                    </a>
+  1177→                  </li>
+  1178→                )
+  1179→              )}
+  1180→            </ul>
+  1181→          </div>
+  1182→
+  1183→          {/* Perusahaan */}
+  1184→          <div>
+  1185→            <h4 className="font-semibold text-foreground mb-4">Perusahaan</h4>
+  1186→            <ul className="space-y-2.5">
+  1187→              {['Tentang Kami', 'Blog & Tutorial', 'Karir', 'SLA', 'Status Server'].map(
+  1188→                (item) => (
+  1189→                  <li key={item}>
+  1190→                    <a href="#" className="text-sm text-muted-foreground hover:text-emerald-500 transition-colors">
+  1191→                      {item}
+  1192→                    </a>
+  1193→                  </li>
+  1194→                )
+  1195→              )}
+  1196→            </ul>
+  1197→          </div>
+  1198→
+  1199→          {/* Legal */}
+  1200→          <div>
+  1201→            <h4 className="font-semibold text-foreground mb-4">Legal</h4>
+  1202→            <ul className="space-y-2.5">
+  1203→              {['Syarat & Ketentuan', 'Kebijakan Privasi', 'Kebijakan Refund', 'Acceptable Use Policy'].map(
+  1204→                (item) => (
+  1205→                  <li key={item}>
+  1206→                    <a href="#" className="text-sm text-muted-foreground hover:text-emerald-500 transition-colors">
+  1207→                      {item}
+  1208→                    </a>
+  1209→                  </li>
+  1210→                )
+  1211→              )}
+  1212→            </ul>
+  1213→          </div>
+  1214→        </div>
+  1215→
+  1216→        <Separator className="my-8" />
+  1217→
+  1218→        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+  1219→          <p className="text-sm text-muted-foreground">
+  1220→            &copy; {new Date().getFullYear()} zaydcluster.com. Semua hak dilindungi.
+  1221→          </p>
+  1222→          <div className="flex items-center gap-4">
+  1223→            <a href="#" className="text-muted-foreground hover:text-emerald-500 transition-colors">
+  1224→              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z" /></svg>
+  1225→            </a>
+  1226→            <a href="#" className="text-muted-foreground hover:text-emerald-500 transition-colors">
+  1227→              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" /></svg>
+  1228→            </a>
+  1229→            <a href="#" className="text-muted-foreground hover:text-emerald-500 transition-colors">
+  1230→              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+  1231→            </a>
+  1232→          </div>
+  1233→        </div>
+  1234→      </div>
+  1235→    </footer>
+  1236→  );
+  1237→}
+  1238→
+  1239→// ==================== MAIN PAGE ====================
+  1240→
+  1241→export default function Home() {
+  1242→  return (
+  1243→    <div className="min-h-screen flex flex-col bg-background">
+  1244→      <Navbar />
+  1245→      <main className="flex-1">
+  1246→        <HeroSection />
+  1247→        <StatsSection />
+  1248→        <FeaturesSection />
+  1249→        <PricingSection />
+  1250→        <FAQSection />
+  1251→        <ContactSection />
+  1252→      </main>
+  1253→      <Footer />
+  1254→    </div>
+  1255→  );
+  1256→}
