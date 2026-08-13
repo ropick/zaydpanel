@@ -33,9 +33,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   useEffect(() => { setMounted(true); }, []);
-  useEffect(() => { if (!loading && !user) router.replace("/login"); }, [user, loading, router]);
-  if (loading || !mounted) return <div className="min-h-screen flex items-center justify-center bg-surface-950"><div className="animate-pulse text-brand-500 text-lg">Loading...</div></div>;
+  useEffect(() => {
+    if (!loading && !mounted) return;
+    if (!loading && !user && !redirecting) {
+      setRedirecting(true);
+      router.replace("/login");
+    }
+  }, [user, loading, router, mounted, redirecting]);
+  if (!mounted || loading) return <div className="min-h-screen flex items-center justify-center bg-surface-950"><div className="animate-pulse text-brand-500 text-lg">Loading...</div></div>;
   if (!user) return null;
   return (<div className="min-h-screen bg-surface-950 flex"><Sidebar user={user} onLogout={logout}/><main className="flex-1 min-w-0"><div className="p-4 lg:p-8 pt-16 lg:pt-8 max-w-7xl mx-auto"><ErrorBoundary>{children}</ErrorBoundary></div></main></div>);
 }
