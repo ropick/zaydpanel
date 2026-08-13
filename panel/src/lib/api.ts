@@ -7,15 +7,24 @@ interface AgentResponse<T = unknown> {
   data?: T;
 }
 
+function _getAuthToken(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const d = localStorage.getItem("zaydpanel_auth");
+    if (d) { const parsed = JSON.parse(d); return parsed.token || ""; }
+  } catch {}
+  return "";
+}
+
 async function agentFetch<T = unknown>(
   path: string,
   options: RequestInit = {}
 ): Promise<AgentResponse<T>> {
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers: { "Content-Type": "application/json", ...options.headers },
-    });
+    const token = _getAuthToken();
+    const headers: Record<string, string> = { "Content-Type": "application/json", ...(options.headers as Record<string, string>) };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
     const raw = await res.json();
     if (res.ok) {
       // Agent wraps responses as { success: true, data: <payload> }
@@ -167,4 +176,56 @@ export const api = {
   getSettings: () => agentFetch<SystemSetting[]>("/settings"),
   updateSetting: (key: string, value: string) =>
     agentFetch("/settings/update", { method: "POST", body: JSON.stringify({ key, value }) }),
+
+  // Auth
+  login: (username: string, password: string) =>
+    agentFetch<{ token: string; user: any }>("/auth/login", { method: "POST", body: JSON.stringify({ username, password }) }),
+  getMe: () => agentFetch<any>("/auth/me"),
+  changePassword: (oldPassword: string, newPassword: string) =>
+    agentFetch("/auth/change-password", { method: "POST", body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }) }),
+
+  // Users (admin)
+  listUsers: () => agentFetch<any[]>("/users"),
+  createUser: (data: { username: string; password?: string; email?: string; full_name?: string; role?: string; package_id?: number }) =>
+    agentFetch("/auth/users", { method: "POST", body: JSON.stringify(data) }),
+  updateUser: (data: { id: number; [key: string]: any }) =>
+    agentFetch(`/auth/users/${data.id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteUser: (id: number) =>
+    agentFetch(`/auth/users/${id}`, { method: "DELETE", body: JSON.stringify({ id }) }),
+  resetPassword: (id: number) =>
+    agentFetch("/auth/users/reset", { method: "POST", body: JSON.stringify({ id }) }),
+
+  // Packages (admin)
+  listPackages: () => agentFetch<any[]>("/packages"),
+  createPackage: (data: Record<string, any>) =>
+    agentFetch("/auth/packages", { method: "POST", body: JSON.stringify(data) }),
+  updatePackage: (data: Record<string, any>) =>
+    agentFetch(`/auth/packages/${data.id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deletePackage: (id: number) =>
+    agentFetch(`/auth/packages/${id}`, { method: "DELETE", body: JSON.stringify({ id }) }),
+
+  // Email
+  listEmail: () => agentFetch<any[]>("/email/list"),
+  createEmail: (domain: string, address: string, password?: string, quota_mb?: number) =>
+    agentFetch("/email/create", { method: "POST", body: JSON.stringify({ domain, address, password, quota_mb }) }),
+  deleteEmail: (id: number) =>
+    agentFetch("/email/delete", { method: "POST", body: JSON.stringify({ id }) }),
+
+  // FTP
+  listFTP: () => agentFetch<any[]>("/ftp/list"),
+  createFTP: (domain: string, username: string, password?: string, home_dir?: string) =>
+    agentFetch("/ftp/create", { method: "POST", body: JSON.stringify({ domain, username, password, home_dir }) }),
+  deleteFTP: (id: number) =>
+    agentFetch("/ftp/delete", { method: "POST", body: JSON.stringify({ id }) }),
+
+  // App Install
+  installApp: (domain: string, appType: string) =>
+    agentFetch("/app/install", { method: "POST", body: JSON.stringify({ domain, app_type: appType }) }),
+
+  // Statistics
+  getStatistics: () => agentFetch<any[]>("/statistics"),
+  getQuota: () => agentFetch<any>("/quota"),
+
+  // Activity
+  getActivity: () => agentFetch<any[]>("/activity"),
 };

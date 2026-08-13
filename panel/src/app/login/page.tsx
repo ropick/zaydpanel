@@ -16,8 +16,15 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(""); setLoading(true);
     await new Promise((r) => setTimeout(r, 500));
-    const success = login(username, password);
-    if (success) { router.push("/admin"); } else { setError("Username atau password salah"); }
+    const success = await login(username, password);
+    if (success) {
+      // Determine redirect based on role
+      try {
+        const stored = JSON.parse(localStorage.getItem("zaydpanel_auth") || "{}");
+        const role = stored.user?.role || "admin";
+        router.push(role === "admin" ? "/admin" : "/customer");
+      } catch { router.push("/admin"); }
+    } else { setError("Username atau password salah"); }
     setLoading(false);
   };
 

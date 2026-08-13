@@ -2,51 +2,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Globe, Database, Server, LogOut, Shield, Menu, X,
-  PanelLeftClose, PanelLeftOpen, Clock, Lock, FileText, HardDrive,
-  Terminal, Settings, Code, ListChecks, Users, Package
+  LayoutDashboard, Globe, Database, LogOut, Shield, Menu, X,
+  PanelLeftClose, PanelLeftOpen, Lock, FileText, HardDrive,
+  UserCircle, ScrollText
 } from "lucide-react";
 import { useState } from "react";
 import type { User } from "@/lib/auth";
 
-const navSections = [
-  {
-    label: "Utama",
-    items: [
-      { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/admin/sites", label: "Websites", icon: Globe },
-      { href: "/admin/databases", label: "Databases", icon: Database },
-      { href: "/admin/files", label: "File Manager", icon: FileText },
-    ]
-  },
-  {
-    label: "Keamanan",
-    items: [
-      { href: "/admin/ssl", label: "SSL Certificates", icon: Lock },
-    ]
-  },
-  {
-    label: "Server",
-    items: [
-      { href: "/admin/server", label: "Server Info", icon: Server },
-      { href: "/admin/processes", label: "Processes", icon: Terminal },
-      { href: "/admin/logs", label: "Log Viewer", icon: HardDrive },
-      { href: "/admin/php", label: "PHP Manager", icon: Code },
-      { href: "/admin/cron", label: "Cron Jobs", icon: ListChecks },
-    ]
-  },
-  {
-    label: "Lainnya",
-    items: [
-      { href: "/admin/backups", label: "Backups", icon: HardDrive },
-      { href: "/admin/users", label: "Users", icon: Users },
-      { href: "/admin/packages", label: "Packages", icon: Package },
-      { href: "/admin/settings", label: "Settings", icon: Settings },
-    ]
-  },
+const navItems = [
+  { href: "/customer", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/customer/sites", label: "Website", icon: Globe },
+  { href: "/customer/databases", label: "Database", icon: Database },
+  { href: "/customer/ssl", label: "SSL", icon: Lock },
+  { href: "/customer/sites", label: "File Manager", icon: FileText },
+  { href: "/customer/backups", label: "Backup", icon: HardDrive },
+  { href: "/customer/logs", label: "Log", icon: ScrollText },
+  { href: "/customer/profile", label: "Profile", icon: UserCircle },
 ];
 
-export default function Sidebar({ user, onLogout }: { user: User; onLogout: () => void }) {
+export default function CustomerSidebar({ user, onLogout }: { user: User; onLogout: () => void }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -77,38 +51,27 @@ export default function Sidebar({ user, onLogout }: { user: User; onLogout: () =
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 py-4 px-2 space-y-4 overflow-y-auto">
-          {navSections.map((section) => (
-            <div key={section.label}>
-              {!collapsed && (
-                <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-surface-600">
-                  {section.label}
-                </p>
-              )}
-              <div className="space-y-1">
-                {section.items.map((item) => {
-                  const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                        isActive
-                          ? "bg-brand-600/20 text-brand-400 border border-brand-600/30"
-                          : "text-surface-400 hover:text-white hover:bg-surface-800 border border-transparent"
-                      } ${collapsed ? "justify-center" : ""}`}
-                      title={collapsed ? item.label : undefined}
-                    >
-                      <item.icon size={18} className="flex-shrink-0" />
-                      {!collapsed && <span>{item.label}</span>}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+        {/* Navigation - flat list, no sections */}
+        <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || (item.href !== "/customer" && pathname.startsWith(item.href));
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-brand-600/20 text-brand-400 border border-brand-600/30"
+                    : "text-surface-400 hover:text-white hover:bg-surface-800 border border-transparent"
+                } ${collapsed ? "justify-center" : ""}`}
+                title={collapsed ? item.label : undefined}
+              >
+                <item.icon size={18} className="flex-shrink-0" />
+                {!collapsed && <span>{item.label}</span>}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* User */}

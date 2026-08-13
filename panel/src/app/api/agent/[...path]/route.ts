@@ -10,6 +10,16 @@ async function proxyRequest(request: NextRequest, pathSegments: string[]): Promi
       Authorization: `Bearer ${AGENT_SECRET}`,
       "Content-Type": "application/json",
     };
+    // Pass user JWT token if present
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader && authHeader.startsWith("Bearer ") && !authHeader.includes(AGENT_SECRET)) {
+      headers["X-User-Token"] = authHeader.replace("Bearer ", "");
+    }
+    // Also check cookie
+    const cookies = request.headers.get("Cookie") || "";
+    const match = cookies.match(/zaydpanel_token=([^;]+)/);
+    if (match) headers["X-User-Token"] = match[1];
+
     const body = request.method !== "GET" ? await request.text() : undefined;
     const res = await fetch(`${AGENT_URL}${agentPath}`, { method: request.method, headers, body });
     const data = await res.text();
@@ -24,6 +34,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   return proxyRequest(request, path);
 }
 export async function POST(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const { path } = await params;
+  return proxyRequest(request, path);
+}
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const { path } = await params;
+  return proxyRequest(request, path);
+}
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
   return proxyRequest(request, path);
 }
