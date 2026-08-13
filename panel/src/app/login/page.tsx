@@ -49,7 +49,7 @@ export default function LoginPage() {
             <button type="submit" disabled={loading||!username||!password} className="btn-primary w-full">{loading?<div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>:<>Masuk<ArrowRight size={16}/></>}</button>
           </form>
         </div>
-        <p className="text-center text-surface-600 text-xs mt-6">ZaydPanel v1.1 — Free &amp; Open Source</p>
+        <p className="text-center text-surface-600 text-xs mt-6">ZaydPanel v3.0 — Free &amp; Open Source</p>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Globe, Database, Server, LogOut, Shield, Menu, X,
   PanelLeftClose, PanelLeftOpen, Clock, Lock, FileText, HardDrive,
-  Terminal, Settings, Code, ListChecks, Users, Package
+  Terminal, Settings, Code, ListChecks, Users, Package, Mail, FolderOpen
 } from "lucide-react";
 import { useState } from "react";
 import type { User } from "@/lib/auth";
@@ -39,6 +39,8 @@ const navSections = [
     label: "Lainnya",
     items: [
       { href: "/admin/backups", label: "Backups", icon: HardDrive },
+      { href: "/admin/email", label: "Email", icon: Mail },
+      { href: "/admin/ftp", label: "FTP", icon: FolderOpen },
       { href: "/admin/users", label: "Users", icon: Users },
       { href: "/admin/packages", label: "Packages", icon: Package },
       { href: "/admin/settings", label: "Settings", icon: Settings },

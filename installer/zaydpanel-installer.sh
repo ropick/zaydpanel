@@ -21,11 +21,11 @@ check_root() { [ "$(id -u)" -ne 0 ] && err "Run as root: sudo $0"; }
 install_packages() {
     info "Installing packages..."
     if [ "$PKG" = "dnf" ]; then
-        dnf install -y nginx mariadb-server python3 python3-pip php php-fpm php-mysqlnd php-json php-mbstring php-xml php-gd php-curl php-zip php-opcache php-intl wget curl tar git unzip which bc jq >/dev/null 2>&1
+        dnf install -y nginx mariadb-server python3 python3-pip php php-fpm php-mysqlnd php-json php-mbstring php-xml php-gd php-curl php-zip php-opcache php-intl wget curl tar git unzip which bc jq sqlite >/dev/null 2>&1
         dnf install -y epel-release certbot python3-certbot-nginx >/dev/null 2>&1 || true
     else
         apt-get update -qq
-        apt-get install -y nginx mariadb-server python3 python3-pip php-fpm php-mysql php-json php-mbstring php-xml php-gd php-curl php-zip php-opcache php-intl wget curl tar git unzip which bc jq >/dev/null 2>&1
+        apt-get install -y nginx mariadb-server python3 python3-pip php-fpm php-mysql php-json php-mbstring php-xml php-gd php-curl php-zip php-opcache php-intl wget curl tar git unzip which bc jq sqlite3 >/dev/null 2>&1
         apt-get install -y certbot python3-certbot-nginx >/dev/null 2>&1 || true
     fi
     ok "Packages installed"
@@ -82,6 +82,7 @@ install_acme() {
 install_agent() {
     info "Installing ZaydPanel Agent v3.0..."
     mkdir -p /opt/zaydpanel/{agent,backups,cron,data,stats}
+    pip3 install paramiko 2>/dev/null || true
     AGENT_URL="https://raw.githubusercontent.com/ropick/zaydpanel/main/agent/zaydpanel-agent.py"
     curl -sSL "$AGENT_URL" -o /opt/zaydpanel/agent/zaydpanel-agent.py 2>/dev/null
     chmod +x /opt/zaydpanel/agent/zaydpanel-agent.py
