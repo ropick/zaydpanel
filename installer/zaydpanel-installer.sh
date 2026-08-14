@@ -86,6 +86,23 @@ install_agent() {
     AGENT_URL="https://raw.githubusercontent.com/ropick/zaydpanel/main/agent/zaydpanel-agent.py"
     curl -sSL "$AGENT_URL" -o /opt/zaydpanel/agent/zaydpanel-agent.py 2>/dev/null
     chmod +x /opt/zaydpanel/agent/zaydpanel-agent.py
+
+    # Generate random secrets
+    local AGENT_SECRET=$(openssl rand -hex 24)
+    local JWT_SECRET=$(openssl rand -hex 24)
+    local PW_SALT=$(openssl rand -hex 16)
+    local ADMIN_PW=$(openssl rand -base64 16 | tr -d '=/+' | head -c 16)
+
+    # Save secrets to .env file
+    cat > /opt/zaydpanel/.env << ENVFILE
+ZAYDPANEL_AGENT_SECRET=$AGENT_SECRET
+ZAYDPANEL_JWT_SECRET=$JWT_SECRET
+ZAYDPANEL_PASSWORD_SALT=$PW_SALT
+ZAYDPANEL_ADMIN_PASSWORD=$ADMIN_PW
+ZAYDPANEL_AGENT_PORT=8442
+ENVFILE
+    chmod 600 /opt/zaydpanel/.env
+
     cat > /etc/systemd/system/zaydpanel-agent.service << EOF
 [Unit]
 Description=ZaydPanel Agent
@@ -96,14 +113,22 @@ User=root
 ExecStart=/usr/bin/python3 /opt/zaydpanel/agent/zaydpanel-agent.py
 Restart=always
 RestartSec=5
-Environment=ZAYDPANEL_AGENT_PORT=8442
-Environment=ZAYDPANEL_AGENT_SECRET=zc-agent-2026-secret
+EnvironmentFile=/opt/zaydpanel/.env
 [Install]
 WantedBy=multi-user.target
 EOF
     systemctl daemon-reload
     systemctl enable zaydpanel-agent >/dev/null 2>&1
     systemctl start zaydpanel-agent
+
+    echo ""
+    echo -e "${GREEN}=== SAVE THESE CREDENTIALS ===${NC}"
+    echo -e "Admin URL : https://$(hostname -I | awk '{print $1}'):2080"
+    echo -e "Username  : admin"
+    echo -e "Password  : ${YELLOW}${ADMIN_PW}${NC}"
+    echo -e "Secrets   : /opt/zaydpanel/.env"
+    echo -e "${GREEN}==============================${NC}"
+    echo ""
     ok "Agent installed and running"
 }
 
@@ -131,7 +156,7 @@ verify() {
     echo "1. Deploy panel: copy .next/standalone to /opt/zaydpanel/panel/"
     echo "2. Setup panel systemd service"
     echo "3. SSL: certbot --nginx -d panel.yourdomain.com"
-    echo "4. Login: admin / zaydpanel2026"
+    echo "4. Login: check credentials shown above or in /opt/zaydpanel/.env"
     echo ""
 }
 

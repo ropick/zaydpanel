@@ -9,8 +9,8 @@ from http.cookies import SimpleCookie
 
 CONF = {
     "PORT": int(os.environ.get("ZAYDPANEL_AGENT_PORT", "8442")),
-    "SECRET": os.environ.get("ZAYDPANEL_AGENT_SECRET", "zc-agent-2026-secret"),
-    "JWT_SECRET": os.environ.get("ZAYDPANEL_JWT_SECRET", "zc-jwt-2026-super-secret-key"),
+    "SECRET": os.environ.get("ZAYDPANEL_AGENT_SECRET", ""),
+    "JWT_SECRET": os.environ.get("ZAYDPANEL_JWT_SECRET", ""),
     "SITES_DIR": "/home",
     "NGINX_CONF_DIR": "/etc/nginx/conf.d",
     "PHP_FPM_CONF_DIR": "/etc/php-fpm.d",
@@ -130,7 +130,15 @@ def _init_db():
     )""")
 
     # Create default admin if not exists
-    admin_hash = _hash_password("zaydpanel2026")
+    _admin_pw = os.environ.get("ZAYDPANEL_ADMIN_PASSWORD", "")
+    admin_hash = _hash_password(_admin_pw) if _admin_pw else None
+    if not admin_hash:
+        # Generate random admin password and log it
+        import secrets as _sec
+        _admin_pw = _sec.token_urlsafe(16)
+        admin_hash = _hash_password(_admin_pw)
+        print(f"[INIT] Default admin password: {_admin_pw}")
+        print("[INIT] Set ZAYDPANEL_ADMIN_PASSWORD env var to customize.")
     c.execute("SELECT id FROM users WHERE username='admin'")
     if not c.fetchone():
         c.execute("INSERT INTO users (username, password_hash, email, full_name, role, status) VALUES (?,?,?,?,?,?)",
@@ -161,7 +169,7 @@ def _get_db():
 
 def _hash_password(password):
     """Hash password with SHA-256 + salt."""
-    salt = "zaydpanel-salt-2026"
+    salt = os.environ.get("ZAYDPANEL_PASSWORD_SALT", "")
     return hashlib.sha256(f"{salt}:{password}".encode()).hexdigest()
 
 
