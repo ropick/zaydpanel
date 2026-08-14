@@ -1,90 +1,65 @@
 # ZaydPanel - Git Ignore
 
-# dependencies
-node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-Thumbs.db
+# ===== CRITICAL SECRETS =====
+.ssh/
 *.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (keep .env.example tracked)
+*.key
 .env
+!.env.example
 .env.local
 .env.*.local
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-local-*
-.claude
-.z-ai-config
-
-# Logs
-*.log
-
-# SSH keys & secrets
-*.key
-id_rsa*
-id_ed25519*
-known_hosts
-.ssh/
 *.secret
 credentials.json
 
-# Deploy scripts (contain SSH keys & tokens)
+# ===== Deploy scripts (contain SSH keys, IPs, tokens) =====
 scripts/
 
-# Python
+# ===== NOT ZaydPanel files =====
+zaydcluster-admin-fix/
+deploy/
+upload/
+download/
+db/
+tool-results/
+examples/
+mini-services/
+.zscripts/
+tests/
+src/            # old nusahost source (not zaydpanel)
+public/         # old nusahost public (not zaydpanel panel public)
+bun.lock
+Caddyfile
+prisma/
+eslint.config.mjs
+postcss.config.mjs
+tailwind.config.ts
+tsconfig.json
+next.config.ts
+package.json
+components.json
+worklog.md
+
+# ===== Python =====
 __pycache__/
 *.pyc
 *.pyo
 *.egg-info/
-dist/
-build/
-.venv/
-venv/
-
-# Panel node_modules (redundant but explicit)
-panel/node_modules/
-
-# Database
 *.db
 *.db-journal
-*.sqlite
-*.sqlite3
 
-# IDE
+# ===== Node.js =====
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# ===== Misc =====
+.DS_Store
+*.log
+.vercel
+local-*
+.claude
+.z-ai-config
 .vscode/
 .idea/
-*.swp
-*.swo
-
-# Skills directory
-/skills/
