@@ -117,7 +117,7 @@ export default function CustomerSitesPage() {
                     <Lock size={12} />
                   </Link>
                   <Link
-                    href={`/admin/sites/${site.domain}/files`}
+                    href={`/customer/sites/${site.domain}/files`}
                     className="btn-ghost text-xs"
                     title="File Manager"
                   >
