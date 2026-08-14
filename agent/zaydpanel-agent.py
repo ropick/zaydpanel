@@ -2,7 +2,7 @@
 """ZaydPanel Agent v3.0 - Full-featured hosting control panel agent.
 Features: SQLite DB, JWT Auth, Multi-User ACL, Packages, Email, FTP, Statistics, Billing Webhook.
 """
-import http.server, json, subprocess, os, sys, signal, socket, secrets, string, shutil, time, re, base64, glob, datetime, platform, hashlib, sqlite3, struct, csv, io
+import http.server, json, subprocess, os, sys, signal, socket, secrets, string, shutil, time, re, base64, glob, datetime, platform, hashlib, sqlite3, struct, csv, io, threading
 from socketserver import ThreadingMixIn
 from pathlib import Path
 from http.cookies import SimpleCookie
@@ -709,7 +709,7 @@ def handle_get_quota(handler):
                 pass
         # Count databases
         try:
-            db_name = domain.replace(".", "_")[:16]
+            db_name = re.sub(r"[^a-zA-Z0-9_]", "_", domain).replace(".", "_")[:16]
             out, _, _ = _run(f"mysql -N -e \"SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name LIKE '{db_name}%'\"", check=False)
             db_count += int(out) if out.strip().isdigit() else 0
         except:
@@ -1162,7 +1162,7 @@ def handle_install_app(handler, data):
                 _run(f"cd {wp_dir} && tar -xzf /tmp/joomla.tar.gz 2>/dev/null")
                 _run("rm -f /tmp/joomla.tar.gz", check=False)
             # Create database
-            db_name = domain.replace(".", "_")[:16]
+            db_name = re.sub(r"[^a-zA-Z0-9_]", "_", domain).replace(".", "_")[:16]
             db_pass = _gen_password(16)
             _run(f"mysql -e \"CREATE DATABASE IF NOT EXISTS {db_name}; CREATE USER IF NOT EXISTS '{db_name}'@'localhost' IDENTIFIED BY '{db_pass}'; GRANT ALL ON {db_name}.* TO '{db_name}'@'localhost'; FLUSH PRIVILEGES;\"", check=False)
             _ok(handler, {
@@ -1288,32 +1288,15 @@ def handle_list_sites(handler):
     _ok(handler, sites)
 
 
-def handle_create_site(handler, data):
-    user = _get_request_user(handler)
-    is_admin = user and user.get("role") == "admin"
-    if not user:
-        return _error(handler, "Unauthorized", 401)
-    domain = _safe_domain(data.get("domain", ""))
-    owner = data.get("owner", domain.split(".")[0])
-    pkg = data.get("package", "")
-    email = data.get("email", "")
-    if not domain:
-        return _error(handler, "Domain wajib diisi")
-    # Check quota for customer
-    if not is_admin:
-        allowed, limit, current = _check_quota(user["id"], "sites")
-        if not allowed:
-            return _error(handler, f"Batas situs tercapai ({current}/{limit}). Upgrade package Anda.")
+def _create_site_core(domain, owner, email="", target_user_id=None, actor_id=None, actor_username="admin", action="create_site"):
+    """Create site files, nginx config, PHP-FPM pool and database. Returns result dict."""
     home = _site_home(domain)
     nginx_conf = _site_nginx(domain)
     if os.path.exists(nginx_conf):
-        return _error(handler, f"Situs {domain} sudah ada")
-    try:
-        # Create home directory
-        os.makedirs(home, exist_ok=True)
-        os.makedirs("%s/public_html" % home, exist_ok=True)
-        # Create default welcome page
-        welcome_html = """<!DOCTYPE html>
+        raise RuntimeError("Situs %s sudah ada" % domain)
+    os.makedirs(home, exist_ok=True)
+    os.makedirs("%s/public_html" % home, exist_ok=True)
+    welcome_html = """<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
@@ -1322,7 +1305,7 @@ def handle_create_site(handler, data):
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.container{max-width:560px;width:100%;text-align:center}
+.container{max-width:560px;width:100%%;text-align:center}
 .logo{display:inline-flex;align-items:center;gap:10px;font-size:24px;font-weight:700;color:#fff;margin-bottom:32px}
 .logo-icon{width:44px;height:44px;background:linear-gradient(135deg,#06b6d4,#0891b2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px}
 h1{font-size:28px;font-weight:700;color:#fff;margin-bottom:8px}
@@ -1379,10 +1362,9 @@ ZaydPanel
 </div>
 </body>
 </html>""" % {"domain": domain}
-        with open("%s/public_html/index.html" % home, "w") as f:
-            f.write(welcome_html)
-        # Create nginx config
-        nginx_tmpl = """server {
+    with open("%s/public_html/index.html" % home, "w") as f:
+        f.write(welcome_html)
+    nginx_tmpl = """server {
     listen 80;
     server_name %s www.%s;
     root %s/public_html;
@@ -1399,10 +1381,9 @@ ZaydPanel
         include fastcgi_params;
     }
 }""" % (domain, domain, home, domain, domain)
-        with open(nginx_conf, "w") as f:
-            f.write(nginx_tmpl)
-        # Create PHP-FPM pool
-        pool_conf = """[%s]
+    with open(nginx_conf, "w") as f:
+        f.write(nginx_tmpl)
+    pool_conf = """[%s]
 user = nginx
 group = nginx
 listen = /run/php-fpm/%s.sock
@@ -1416,40 +1397,109 @@ pm.max_spare_servers = 3
 pm.max_requests = 500
 php_admin_value[open_basedir] = %s:/tmp
 """ % (domain, domain, home)
-        pool_path = "%s/%s.conf" % (CONF["PHP_FPM_CONF_DIR"], domain)
-        with open(pool_path, "w") as f:
-            f.write(pool_conf)
-        # Restart services
-        _run("nginx -t 2>/dev/null && systemctl reload nginx 2>/dev/null || systemctl restart nginx 2>/dev/null", check=False)
-        _run("systemctl restart php-fpm 2>/dev/null || systemctl reload php-fpm 2>/dev/null", check=False)
-        # Create database
-        db_name = domain.replace(".", "_")[:16]
-        db_pass = _gen_password(16)
+    pool_path = "%s/%s.conf" % (CONF["PHP_FPM_CONF_DIR"], domain)
+    with open(pool_path, "w") as f:
+        f.write(pool_conf)
+    _run("nginx -t 2>/dev/null && systemctl reload nginx 2>/dev/null || systemctl restart nginx 2>/dev/null", check=False)
+    _run("systemctl restart php-fpm 2>/dev/null || systemctl reload php-fpm 2>/dev/null", check=False)
+    db_name = re.sub(r"[^a-zA-Z0-9_]", "_", domain).replace(".", "_")[:16]
+    db_pass = _gen_password(16)
+    try:
+        _run(f"mysql -e \"CREATE DATABASE IF NOT EXISTS {db_name}; CREATE USER IF NOT EXISTS '{db_name}'@'localhost' IDENTIFIED BY '{db_pass}'; GRANT ALL ON {db_name}.* TO '{db_name}'@'localhost'; FLUSH PRIVILEGES;\"")
+    except:
+        db_pass = ""
+    if target_user_id:
         try:
-            _run(f"mysql -e \"CREATE DATABASE IF NOT EXISTS {db_name}; CREATE USER IF NOT EXISTS '{db_name}'@'localhost' IDENTIFIED BY '{db_pass}'; GRANT ALL ON {db_name}.* TO '{db_name}'@'localhost'; FLUSH PRIVILEGES;\"")
-        except:
-            db_pass = ""
-        # Assign site to user in DB
-        conn = _get_db()
+            conn = _get_db()
+            conn.execute("INSERT INTO site_owners (domain, user_id) VALUES (?,?)", (domain, target_user_id))
+            conn.commit()
+            conn.close()
+        except sqlite3.IntegrityError:
+            pass
+    _log_activity(actor_id or 0, actor_username or "", action, f"Created site: {domain}")
+    result = {
+        "domain": domain, "username": owner, "home_dir": home,
+    }
+    if db_pass:
+        result["database"] = {"database": db_name, "username": db_name, "password": db_pass, "host": "localhost"}
+    return result
+
+
+def handle_create_site(handler, data):
+    user = _get_request_user(handler)
+    is_admin = user and user.get("role") == "admin"
+    if not user:
+        return _error(handler, "Unauthorized", 401)
+    domain = _safe_domain(data.get("domain", ""))
+    owner = data.get("owner", domain.split(".")[0])
+    pkg = data.get("package", "")
+    email = data.get("email", "")
+    if not domain:
+        return _error(handler, "Domain wajib diisi")
+    # Check quota for customer
+    if not is_admin:
+        allowed, limit, current = _check_quota(user["id"], "sites")
+        if not allowed:
+            return _error(handler, f"Batas situs tercapai ({current}/{limit}). Upgrade package Anda.")
+    home = _site_home(domain)
+    nginx_conf = _site_nginx(domain)
+    if os.path.exists(nginx_conf):
+        return _error(handler, f"Situs {domain} sudah ada")
+    try:
         target_user_id = user["id"] if not is_admin else None
         if is_admin:
+            conn = _get_db()
             target_user = conn.execute("SELECT id FROM users WHERE username=?", (owner,)).fetchone()
+            conn.close()
             target_user_id = target_user["id"] if target_user else None
-        if target_user_id:
-            try:
-                conn.execute("INSERT INTO site_owners (domain, user_id) VALUES (?,?)", (domain, target_user_id))
-                conn.commit()
-            except sqlite3.IntegrityError:
-                pass
-        conn.close()
-        admin_user = _get_request_user(handler)
-        _log_activity(admin_user["id"] if admin_user else 0, admin_user["username"] if admin_user else "",
-                       "create_site", f"Created site: {domain}")
-        result = {
-            "domain": domain, "username": owner, "home_dir": home,
-        }
-        if db_pass:
-            result["database"] = {"database": db_name, "username": db_name, "password": db_pass, "host": "localhost"}
+        result = _create_site_core(domain, owner, email, target_user_id,
+                                   user["id"], user["username"], "create_site")
+        _ok(handler, result)
+    except Exception as e:
+        _error(handler, str(e))
+
+
+def handle_auto_provision(handler, data):
+    """Provision user + site from external billing/order system (shared secret auth)."""
+    secret = handler.headers.get("X-Agent-Secret", "") or handler.headers.get("Authorization", "").replace("Bearer ", "").strip()
+    if not CONF["SECRET"] or secret != CONF["SECRET"]:
+        return _error(handler, "Unauthorized", 401)
+    username = data.get("username", "").strip().lower()
+    password = data.get("password", _gen_password(12))
+    email = data.get("email", "").strip()
+    full_name = data.get("full_name", data.get("name", "")).strip()
+    domain = _safe_domain(data.get("domain", ""))
+    pkg_slug = data.get("package_slug", data.get("package", "")).strip().lower()
+    if not domain:
+        return _error(handler, "domain wajib diisi")
+    if not username:
+        username = re.sub(r"[^a-z0-9_]", "_", domain.split(".")[0])[:20]
+    if not re.match(r'^[a-z0-9_]+$', username):
+        return _error(handler, "Username hanya boleh huruf kecil, angka, dan underscore")
+    conn = _get_db()
+    pkg_id = None
+    if pkg_slug:
+        pkg_row = conn.execute("SELECT id FROM packages WHERE slug=?", (pkg_slug,)).fetchone()
+        pkg_id = pkg_row["id"] if pkg_row else None
+    existing = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+    if existing:
+        user_id = existing["id"]
+        if pkg_id:
+            conn.execute("UPDATE users SET package_id=?, status='active', email=? WHERE id=?", (pkg_id, email, user_id))
+            conn.commit()
+    else:
+        conn.execute("INSERT INTO users (username, password_hash, email, full_name, role, package_id, status) VALUES (?,?,?,?,?,?,?)",
+                     (username, _hash_password(password), email, full_name, "customer", pkg_id, "active"))
+        conn.commit()
+        user_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.close()
+    if os.path.exists(_site_nginx(domain)):
+        return _error(handler, f"Situs {domain} sudah ada")
+    try:
+        result = _create_site_core(domain, username, email, user_id, 1, "admin", "auto_provision")
+        result["username"] = username
+        if not data.get("password"):
+            result["password"] = password
         _ok(handler, result)
     except Exception as e:
         _error(handler, str(e))
@@ -1476,7 +1526,7 @@ def handle_delete_site(handler, data):
         if os.path.isdir(home):
             shutil.rmtree(home)
         # Remove database
-        db_name = domain.replace(".", "_")[:16]
+        db_name = re.sub(r"[^a-zA-Z0-9_]", "_", domain).replace(".", "_")[:16]
         _run(f"mysql -e \"DROP DATABASE IF EXISTS {db_name}; DROP USER IF EXISTS '{db_name}'@'localhost'; FLUSH PRIVILEGES;\"", check=False)
         # Remove from DB
         conn = _get_db()
@@ -1577,7 +1627,7 @@ def handle_install_wordpress(handler, data):
             return _error(handler, "Gagal mengekstrak WordPress. Coba lagi.")
 
         # Step 2: Create database
-        db_name = domain.replace(".", "_")[:16]
+        db_name = re.sub(r"[^a-zA-Z0-9_]", "_", domain).replace(".", "_")[:16]
         db_pass = _gen_password(16)
         _run(f"mysql -e \"CREATE DATABASE IF NOT EXISTS \\`{db_name}\\`; CREATE USER IF NOT EXISTS '{db_name}'@'localhost' IDENTIFIED BY '{db_pass}'; GRANT ALL ON \\`{db_name}\\`.* TO '{db_name}'@'localhost'; FLUSH PRIVILEGES;\"", check=False)
 
@@ -1642,7 +1692,7 @@ def handle_remove_wordpress(handler, data):
         # Optionally remove database
         drop_db = data.get("drop_database", False)
         if drop_db:
-            db_name = domain.replace(".", "_")[:16]
+            db_name = re.sub(r"[^a-zA-Z0-9_]", "_", domain).replace(".", "_")[:16]
             _run(f"mysql -e \"DROP DATABASE IF EXISTS \\`{db_name}\\`; DROP USER IF EXISTS '{db_name}'@'localhost'; FLUSH PRIVILEGES;\"", check=False)
         # Recreate public_html
         os.makedirs(wp_dir, exist_ok=True)
@@ -1693,7 +1743,7 @@ def handle_create_database(handler, data):
     if not _is_admin(handler):
         return _error(handler, "Admin only", 403)
     domain = _safe_domain(data.get("domain", ""))
-    db_name = domain.replace(".", "_")[:16]
+    db_name = re.sub(r"[^a-zA-Z0-9_]", "_", domain).replace(".", "_")[:16]
     db_pass = _gen_password(16)
     try:
         _run(f"mysql -e \"CREATE DATABASE IF NOT EXISTS {db_name}; CREATE USER IF NOT EXISTS '{db_name}'@'localhost' IDENTIFIED BY '{db_pass}'; GRANT ALL ON {db_name}.* TO '{db_name}'@'localhost'; FLUSH PRIVILEGES;\"")
@@ -1964,6 +2014,138 @@ def handle_toggle_cron(handler, data):
     _ok(handler, {"message": "Cron job toggled"})
 
 
+# ── Cron Scheduler (background thread) ───────────────────────────────────────
+
+CRON_ALIASES = {
+    "@hourly": "0 * * * *",
+    "@daily": "0 0 * * *",
+    "@midnight": "0 0 * * *",
+    "@weekly": "0 0 * * 0",
+    "@monthly": "0 0 1 * *",
+    "@yearly": "0 0 1 1 *",
+    "@annually": "0 0 1 1 *",
+}
+
+
+def _cron_next(schedule, base=None):
+    """Compute the next scheduled run time (seconds since epoch) from a 5-field cron expr."""
+    base = base if base is not None else time.time()
+    expr = CRON_ALIASES.get(schedule.strip().lower(), schedule.strip())
+    parts = expr.split()
+    if len(parts) != 5:
+        return None
+    def _match(vals, cur):
+        if vals == ["*"]:
+            return True
+        for v in vals:
+            if v == "*":
+                return True
+            step = 1
+            token = v
+            if "/" in v:
+                token, step = v.split("/", 1)
+                step = int(step)
+            if token == "*":
+                if cur % step == 0:
+                    return True
+                continue
+            if "-" in token:
+                a, b = map(int, token.split("-"))
+                if a <= cur <= b and (cur - a) % step == 0:
+                    return True
+            else:
+                if int(token) == cur and (int(token) - (int(token) // step) * step) == (0 if int(token) % step == 0 else int(token) % step):
+                    pass
+                if int(token) == cur:
+                    return True
+        return False
+    for i in range(1, 366 * 2):
+        t = base + i * 60
+        dt = datetime.datetime.fromtimestamp(t)
+        mins = parts[0].split(","); hrs = parts[1].split(","); dom = parts[2].split(","); mon = parts[3].split(","); dow = parts[4].split(",")
+        if _match(mins, dt.minute) and _match(hrs, dt.hour) and _match(dom, dt.day) and _match(mon, dt.month) and _match(dow, dt.weekday()):
+            return t
+    return None
+
+
+def _cron_runner_loop(stop_event):
+    """Background thread that executes enabled cron jobs on schedule."""
+    last_run = {}
+    while not stop_event.is_set():
+        try:
+            if os.path.exists(CONF["CRON_DIR"]):
+                for f in sorted(Path(CONF["CRON_DIR"]).glob("*.json")):
+                    try:
+                        with open(f) as fh:
+                            job = json.load(fh)
+                        if not job.get("enabled", True):
+                            continue
+                        schedule = job.get("schedule", "")
+                        command = job.get("command", "")
+                        if not schedule or not command:
+                            continue
+                        job_id = f.stem
+                        last = last_run.get(job_id, 0)
+                        nxt = _cron_next(schedule, last)
+                        if nxt is not None and time.time() >= nxt:
+                            last_run[job_id] = time.time()
+                            try:
+                                subprocess.run(command, shell=True, timeout=1800, capture_output=True, text=True)
+                                _log_activity(0, "cron", "cron_run", f"Ran cron job {job_id}: {command[:80]}")
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        stop_event.wait(60)
+
+
+def start_cron_scheduler():
+    """Start the cron scheduler thread if not already running."""
+    stop_event = threading.Event()
+    thread = threading.Thread(target=_cron_runner_loop, args=(stop_event,), daemon=True)
+    thread.start()
+    return thread, stop_event
+
+
+def handle_backup_all(handler, data):
+    """Create backups for all sites (used by scheduled jobs)."""
+    secret = handler.headers.get("X-Agent-Secret", "") or handler.headers.get("Authorization", "").replace("Bearer ", "").strip()
+    if not CONF["SECRET"] or secret != CONF["SECRET"]:
+        return _error(handler, "Unauthorized", 401)
+    results = []
+    os.makedirs(CONF["BACKUP_DIR"], exist_ok=True)
+    for site in _get_sites():
+        domain = site.get("domain", "")
+        home = site.get("home", "")
+        if not domain or not os.path.isdir(home) or domain.startswith(SYSTEM_CONF_PREFIXES):
+            continue
+        try:
+            ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = "%s_%s.tar.gz" % (domain, ts)
+            filepath = "%s/%s" % (CONF["BACKUP_DIR"], filename)
+            _run("tar -czf %s -C %s %s 2>/dev/null" % (filepath, os.path.dirname(home), os.path.basename(home)), check=False)
+            if os.path.exists(filepath):
+                results.append({"domain": domain, "filename": filename, "size": _fmt_net(os.path.getsize(filepath))})
+        except Exception:
+            pass
+    # Retention: remove backups older than 7 days
+    try:
+        cutoff = time.time() - (7 * 86400)
+        if os.path.exists(CONF["BACKUP_DIR"]):
+            for f in Path(CONF["BACKUP_DIR"]).glob("*.tar.gz"):
+                try:
+                    if f.stat().st_mtime < cutoff:
+                        f.unlink()
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    _log_activity(1, "admin", "backup_all", "Backed up %d sites" % len(results))
+    _ok(handler, {"message": "Backed up %d sites" % len(results), "backups": results})
+
+
 def handle_list_backups(handler):
     backups = []
     if os.path.exists(CONF["BACKUP_DIR"]):
@@ -2151,6 +2333,8 @@ class AgentHandler(http.server.BaseHTTPRequestHandler):
             if path == "/auth/login": return handle_auth_login(self, data)
             if path == "/auth/change-password": return handle_auth_change_password(self, data)
             if path == "/site/create": return handle_create_site(self, data)
+            if path == "/auto/provision": return handle_auto_provision(self, data)
+            if path == "/backup/all": return handle_backup_all(self, data)
             if path == "/site/delete": return handle_delete_site(self, data)
             if path == "/wordpress/install": return handle_install_wordpress(self, data)
             if path == "/wordpress/remove": return handle_remove_wordpress(self, data)
@@ -2258,13 +2442,14 @@ class ThreadedHTTPServer(ThreadingMixIn, http.server.HTTPServer):
 
 def main():
     _init_db()
-    server = ThreadedHTTPServer(("0.0.0.0", CONF["PORT"]), AgentHandler)
+    server = ThreadedHTTPServer(("127.0.0.1", CONF["PORT"]), AgentHandler)
     print(f"ZaydPanel Agent v3.0 running on port {CONF['PORT']}")
     print(f"Database: {CONF['DB_PATH']}")
     sys.stdout.flush()
     signal.signal(signal.SIGTERM, lambda s, f: (server.shutdown(), sys.exit(0)))
     signal.signal(signal.SIGINT, lambda s, f: (server.shutdown(), sys.exit(0)))
     try:
+        start_cron_scheduler()
         server.serve_forever()
     except:
         sys.exit(0)
