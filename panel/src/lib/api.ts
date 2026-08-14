@@ -218,9 +218,10 @@ export const api = {
   deleteFTP: (id: number) =>
     agentFetch("/ftp/delete", { method: "POST", body: JSON.stringify({ id }) }),
 
-  // App Install
-  installApp: (domain: string, appType: string) =>
-    agentFetch("/app/install", { method: "POST", body: JSON.stringify({ domain, app_type: appType }) }),
+  // App Installer (Softaculous-like)
+  listApps: () => agentFetch<any[]>("/apps"),
+  installApp: (domain: string, appType: string, fields?: Record<string, string>) =>
+    agentFetch("/app/install", { method: "POST", body: JSON.stringify({ domain, app_type: appType, ...fields }) }),
 
   // Statistics
   getStatistics: () => agentFetch<any[]>("/statistics"),

@@ -1059,6 +1059,158 @@ def handle_list_webhooks(handler):
     _ok(handler, [dict(r) for r in rows])
 
 
+# ── App Installer Catalog ────────────────────────────────────────────────────
+
+APPS_CATALOG = [
+    {
+        "id": "wordpress", "name": "WordPress", "version": "6.7",
+        "icon": "WP", "color": "#21759b",
+        "description": "Blogger & CMS paling populer di dunia",
+        "category": "CMS",
+        "website": "https://wordpress.org",
+        "fields": [
+            {"key": "title", "label": "Site Title", "type": "text", "default": "{domain}", "required": True},
+            {"key": "admin_user", "label": "Admin Username", "type": "text", "default": "admin", "required": True},
+            {"key": "admin_pass", "label": "Admin Password", "type": "password", "default": "", "required": False},
+            {"key": "admin_email", "label": "Admin Email", "type": "text", "default": "admin@{domain}", "required": True},
+        ],
+    },
+    {
+        "id": "joomla", "name": "Joomla", "version": "5.0",
+        "icon": "J", "color": "#f44321",
+        "description": "CMS profesional untuk website kompleks",
+        "category": "CMS",
+        "website": "https://www.joomla.org",
+        "fields": [],
+    },
+    {
+        "id": "laravel", "name": "Laravel", "version": "11.x",
+        "icon": "L", "color": "#ff2d20",
+        "description": "PHP framework populer untuk web application",
+        "category": "Framework",
+        "website": "https://laravel.com",
+        "fields": [],
+    },
+    {
+        "id": "nextcloud", "name": "Nextcloud", "version": "29",
+        "icon": "NC", "color": "#0082c9",
+        "description": "Cloud storage pribadi (seperti Google Drive)",
+        "category": "Productivity",
+        "website": "https://nextcloud.com",
+        "fields": [
+            {"key": "admin_user", "label": "Admin Username", "type": "text", "default": "admin", "required": True},
+            {"key": "admin_pass", "label": "Admin Password", "type": "password", "default": "", "required": False},
+            {"key": "admin_email", "label": "Admin Email", "type": "text", "default": "admin@{domain}", "required": True},
+        ],
+    },
+    {
+        "id": "prestashop", "name": "PrestaShop", "version": "8.1",
+        "icon": "PS", "color": "#df0084",
+        "description": "Platform toko online / e-commerce",
+        "category": "E-Commerce",
+        "website": "https://prestashop.com",
+        "fields": [],
+    },
+    {
+        "id": "phpmyadmin", "name": "phpMyAdmin", "version": "5.2",
+        "icon": "pMA", "color": "#f0930d",
+        "description": "Manage database MySQL via web browser",
+        "category": "Database",
+        "website": "https://www.phpmyadmin.net",
+        "fields": [],
+    },
+]
+
+
+def handle_list_apps(handler):
+    _ok(handler, APPS_CATALOG)
+
+
+def handle_install_app(handler, data):
+    """Install apps like WordPress, Joomla, Laravel, Nextcloud, etc."""
+    user = _get_request_user(handler)
+    if not user:
+        return _error(handler, "Unauthorized", 401)
+    domain = _safe_domain(data.get("domain", ""))
+    app_type = data.get("app_type", "").strip().lower()
+    if not domain or not app_type:
+        return _error(handler, "Domain dan app type wajib")
+    home = _site_home(domain)
+    wp_dir = "%s/public_html" % home
+    if not os.path.isdir(home):
+        return _error(handler, "Home directory %s tidak ditemukan. Buat website dulu." % home)
+
+    # Log activity
+    _log_activity(user["id"], user["username"], "install_app_start", f"Installing {app_type} on {domain}")
+
+    try:
+        if app_type == "wordpress":
+            return handle_install_wordpress(handler, data)
+
+        elif app_type == "joomla":
+            # Download and extract Joomla
+            if not os.path.exists("%s/installation" % wp_dir):
+                _run(f"cd /tmp && wget -q https://downloads.joomla.org/cms/joomla5/5-2-4/Joomla_5-2-4-Stable-Full_Package.tar.gz -O joomla.tar.gz 2>/dev/null")
+                _run(f"cd {wp_dir} && tar -xzf /tmp/joomla.tar.gz 2>/dev/null")
+                _run("rm -f /tmp/joomla.tar.gz", check=False)
+            # Create database
+            db_name = domain.replace(".", "_")[:16]
+            db_pass = _gen_password(16)
+            _run(f"mysql -e \"CREATE DATABASE IF NOT EXISTS {db_name}; CREATE USER IF NOT EXISTS '{db_name}'@'localhost' IDENTIFIED BY '{db_pass}'; GRANT ALL ON {db_name}.* TO '{db_name}'@'localhost'; FLUSH PRIVILEGES;\"", check=False)
+            _ok(handler, {
+                "message": f"Joomla di-extract ke {wp_dir}. Buka https://{domain} untuk lanjutkan instalasi.",
+                "database": {"database": db_name, "username": db_name, "password": db_pass, "host": "localhost"},
+            })
+
+        elif app_type == "laravel":
+            if not os.path.exists("/usr/local/bin/composer"):
+                _run("curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer 2>/dev/null || true", check=False)
+            # Clear directory first
+            _run(f"rm -rf {wp_dir}/* {wp_dir}/.* 2>/dev/null || true", check=False)
+            _run(f"cd {home} && composer create-project laravel/laravel public_html 2>/dev/null", timeout=300)
+            _run(f"cd {wp_dir} && php artisan key:generate --force 2>/dev/null || true", check=False)
+            _ok(handler, {"message": f"Laravel terinstall di {wp_dir}. Framework siap digunakan."})
+
+        elif app_type == "nextcloud":
+            nc_ver = "29.0.5"
+            tar_url = f"https://download.nextcloud.com/server/releases/nextcloud-{nc_ver}.tar.bz2"
+            _run(f"cd {home} && wget -q {tar_url} -O nextcloud.tar.bz2 2>/dev/null", timeout=300)
+            _run(f"cd {home} && tar -xjf nextcloud.tar.bz2 2>/dev/null")
+            _run(f"cp -a {home}/nextcloud/* {wp_dir}/ && cp -a {home}/nextcloud/.* {wp_dir}/ 2>/dev/null || true")
+            _run(f"rm -rf {home}/nextcloud {home}/nextcloud.tar.bz2", check=False)
+            # Create data dir
+            _run(f"mkdir -p {home}/nextcloud-data", check=False)
+            _run(f"chown -R nginx:nginx {wp_dir} {home}/nextcloud-data 2>/dev/null || true", check=False)
+            _ok(handler, {"message": f"Nextcloud terinstall. Buka https://{domain} untuk setup awal."})
+
+        elif app_type == "prestashop":
+            ps_ver = "8.1.7"
+            _run(f"cd {home} && wget -q https://github.com/PrestaShop/PrestaShop/releases/download/{ps_ver}/prestashop_{ps_ver}.zip -O ps.zip 2>/dev/null", timeout=300)
+            _run(f"cd {home} && unzip -q ps.zip -d {home}/ 2>/dev/null || true")
+            _run(f"cp -a {home}/prestashop/* {wp_dir}/ 2>/dev/null || true")
+            _run(f"rm -rf {home}/prestashop {home}/ps.zip {home}/install_prestashop.php 2>/dev/null || true", check=False)
+            _run(f"chown -R nginx:nginx {wp_dir} 2>/dev/null || true", check=False)
+            _ok(handler, {"message": f"PrestaShop terinstall. Buka https://{domain}/install untuk setup."})
+
+        elif app_type == "phpmyadmin":
+            pma_ver = "5.2.1"
+            _run(f"cd {home} && wget -q https://files.phpmyadmin.net/phpMyAdmin/{pma_ver}/phpMyAdmin-{pma_ver}-all-languages.tar.gz -O pma.tar.gz 2>/dev/null", timeout=300)
+            _run(f"cd {home} && tar -xzf pma.tar.gz 2>/dev/null")
+            _run(f"rm -rf {wp_dir}/* 2>/dev/null; cp -a {home}/phpMyAdmin-{pma_ver}/* {wp_dir}/ 2>/dev/null")
+            _run(f"rm -rf {home}/phpMyAdmin-{pma_ver} {home}/pma.tar.gz", check=False)
+            # Create config
+            _run(f"cp {wp_dir}/config.sample.inc.php {wp_dir}/config.inc.php 2>/dev/null || true", check=False)
+            _run(f"sed -i \"s/.*blowfish_secret.*/\\$cfg\\['blowfish_secret'] = '{_gen_password(32)}';/\" {wp_dir}/config.inc.php 2>/dev/null || true", check=False)
+            _ok(handler, {"message": f"phpMyAdmin terinstall. Buka https://{domain} untuk akses database."})
+
+        else:
+            _error(handler, f"App type '{app_type}' tidak didukung. Pilihan: wordpress, joomla, laravel, nextcloud, prestashop, phpmyadmin")
+
+    except Exception as e:
+        _log_activity(user["id"], user["username"], "install_app_error", f"Failed {app_type} on {domain}: {str(e)}")
+        _error(handler, f"Install gagal: {str(e)}")
+
+
 # ── Server Management Handlers (from v2.1) ──────────────────────────────────
 
 def handle_health(handler):
@@ -1823,6 +1975,7 @@ class AgentHandler(http.server.BaseHTTPRequestHandler):
             if path == "/statistics": return handle_get_statistics(self)
             if path == "/activity": return handle_get_activity(self)
             if path == "/webhooks": return handle_list_webhooks(self)
+            if path == "/apps": return handle_list_apps(self)
             if path.startswith("/files/"):
                 parts = path[7:].split("/", 1)
                 domain = parts[0]

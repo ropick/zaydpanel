@@ -4,7 +4,8 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Globe, Database, Server, LogOut, Shield, Menu, X,
   PanelLeftClose, PanelLeftOpen, Clock, Lock, FileText, HardDrive,
-  Terminal, Settings, Code, ListChecks, Users, Package, Mail, FolderOpen
+  Terminal, Settings, Code, ListChecks, Users, Package, Mail, FolderOpen,
+  Download
 } from "lucide-react";
 import { useState } from "react";
 import type { User } from "@/lib/auth";
@@ -15,6 +16,7 @@ const navSections = [
     items: [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
       { href: "/admin/sites", label: "Websites", icon: Globe },
+      { href: "/admin/apps", label: "App Installer", icon: Download },
       { href: "/admin/databases", label: "Databases", icon: Database },
       { href: "/admin/files", label: "File Manager", icon: FileText },
     ]
