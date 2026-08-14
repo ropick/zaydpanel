@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Globe, Database, LogOut, Shield, Menu, X,
   PanelLeftClose, PanelLeftOpen, Lock, FileText, HardDrive,
-  UserCircle, ScrollText, Mail, FolderOpen
+  UserCircle, ScrollText, Mail, FolderOpen, Zap
 } from "lucide-react";
 import { useState } from "react";
 import type { User } from "@/lib/auth";
@@ -12,6 +12,7 @@ import type { User } from "@/lib/auth";
 const navItems = [
   { href: "/customer", label: "Dashboard", icon: LayoutDashboard },
   { href: "/customer/sites", label: "Website", icon: Globe },
+  { href: "/customer/apps", label: "Install App", icon: Zap },
   { href: "/customer/databases", label: "Database", icon: Database },
   { href: "/customer/ssl", label: "SSL", icon: Lock },
   { href: "/customer/email", label: "Email", icon: Mail },

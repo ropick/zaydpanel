@@ -112,6 +112,8 @@ export const api = {
     agentFetch("/site/delete", { method: "POST", body: JSON.stringify({ domain }) }),
   installWordPress: (domain: string, title: string, adminUser: string, adminPass?: string, adminEmail?: string) =>
     agentFetch("/wordpress/install", { method: "POST", body: JSON.stringify({ domain, title, admin_user: adminUser, admin_pass: adminPass || "", admin_email: adminEmail || "" }) }),
+  removeWordPress: (domain: string, dropDatabase: boolean = false) =>
+    agentFetch("/wordpress/remove", { method: "POST", body: JSON.stringify({ domain, drop_database: dropDatabase }) }),
 
   // SSL
   issueSSL: (domain: string) =>
