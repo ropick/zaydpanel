@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import { api, type SiteInfo } from "@/lib/api";
+import { api, type SiteInfo, type SiteApps } from "@/lib/api";
 import {
   Zap, Download, Globe, CheckCircle, XCircle, Loader2, ArrowRight,
   Database, Shield, ChevronDown, ChevronUp, ExternalLink, Trash2,
-  ShoppingBag, Rocket, Lock, FileSpreadsheet, Cloud, Code,
+  ShoppingBag, Rocket, Lock, FileSpreadsheet, Cloud, Code, Package, RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 
@@ -33,6 +33,7 @@ interface InstallResult {
 export default function CustomerAppsPage() {
   const [apps, setApps] = useState<AppInfo[]>([]);
   const [sites, setSites] = useState<SiteInfo[]>([]);
+  const [installed, setInstalled] = useState<SiteApps[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState<AppInfo | null>(null);
   const [selectedSite, setSelectedSite] = useState<string>("");
@@ -40,14 +41,21 @@ export default function CustomerAppsPage() {
   const [result, setResult] = useState<InstallResult | null>(null);
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [removing, setRemoving] = useState<string | null>(null);
+
+  const loadInstalled = () => {
+    api.appStatus().then(res => { if (res.success) setInstalled(res.data || []); });
+  };
 
   useEffect(() => {
     Promise.all([
       api.listApps(),
       api.listSites(),
-    ]).then(([appsRes, sitesRes]) => {
+      api.appStatus(),
+    ]).then(([appsRes, sitesRes, statusRes]) => {
       if (appsRes.success) setApps(appsRes.data || []);
       if (sitesRes.success) setSites((sitesRes.data || []).filter(s => s.exists));
+      if (statusRes.success) setInstalled(statusRes.data || []);
       setLoading(false);
     });
   }, []);
@@ -90,11 +98,26 @@ export default function CustomerAppsPage() {
       });
       const sitesRes = await api.listSites();
       if (sitesRes.success) setSites(sitesRes.data || []);
+      loadInstalled();
     } else {
       setResult({
         success: false,
         message: (res as any).error || "Installation failed",
       });
+    }
+  };
+
+  const handleRemoveApp = async (domain: string, appId: string, appName: string) => {
+    if (!confirm(`Hapus ${appName} dari ${domain}?`)) return;
+    setRemoving(`${domain}/${appId}`);
+    const res = await api.removeApp(domain, appId, false);
+    setRemoving(null);
+    if (res.success) {
+      loadInstalled();
+      const sitesRes = await api.listSites();
+      if (sitesRes.success) setSites(sitesRes.data || []);
+    } else {
+      setResult({ success: false, message: res.error || "Gagal menghapus aplikasi" });
     }
   };
 
@@ -247,6 +270,57 @@ export default function CustomerAppsPage() {
                   <button onClick={() => handleRemoveWP(s.domain)} className="btn-ghost text-xs text-red-400 hover:text-red-300">
                     <Trash2 size={12} />
                   </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Installed Apps (all apps) */}
+      {installed.filter(s => s.apps.length > 0).length > 0 && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Package size={16} className="text-brand-400" />
+              Aplikasi Terpasang ({installed.reduce((n, s) => n + s.apps.length, 0)})
+            </h3>
+            <button onClick={loadInstalled} className="btn-ghost text-xs">
+              <RefreshCw size={12} /> Refresh
+            </button>
+          </div>
+          <div className="space-y-3">
+            {installed.filter(s => s.apps.length > 0).map(site => (
+              <div key={site.domain}>
+                <p className="text-xs text-surface-400 mb-2 flex items-center gap-1">
+                  <Globe size={12} /> {site.domain}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {site.apps.map(app => (
+                    <div key={app.app_id} className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm font-medium truncate">
+                          {app.app_name} {app.version && <span className="text-xs text-surface-400">v{app.version}</span>}
+                        </p>
+                        <p className="text-xs text-surface-400 truncate">
+                          {app.installed_at ? `Terpasang ${app.installed_at.replace("T", " ").slice(0, 16)}` : "Terpasang"}
+                          {app.needs_web_setup && <span className="text-yellow-400 ml-1">(setup web)</span>}
+                        </p>
+                      </div>
+                      {app.admin_url && (
+                        <a href={app.admin_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                          <ExternalLink size={16} />
+                        </a>
+                      )}
+                      <button
+                        onClick={() => handleRemoveApp(site.domain, app.app_id, app.app_name)}
+                        disabled={removing === `${site.domain}/${app.app_id}`}
+                        className="text-red-400 hover:text-red-300 disabled:opacity-50"
+                      >
+                        {removing === `${site.domain}/${app.app_id}` ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
@@ -416,12 +490,12 @@ export default function CustomerAppsPage() {
             Sistem akan otomatis mendownload, mengekstrak, membuat database, dan mengkonfigurasi permission.
           </p>
           <p>
-            <strong className="text-surface-300">WordPress</strong> — Full auto-install. Database + wp-config.php + admin account dibuat otomatis.
-            Jika WP-CLI tersedia di server, setup WordPress 100% otomatis tanpa perlu web installer.
+            <strong className="text-surface-300">Full auto-install</strong> — WordPress & Nextcloud diinstall 100% otomatis
+            (database, file konfigurasi, dan akun admin dibuat langsung tanpa web installer).
           </p>
           <p>
-            <strong className="text-surface-300">Aplikasi lain</strong> — File di-download dan di-extract. Database dibuat otomatis.
-            Lanjutkan setup melalui web installer di browser.
+            <strong className="text-surface-300">Aplikasi lain</strong> — File di-download dan di-extract, database dibuat otomatis.
+            Joomla & PrestaShop diselesaikan lewat web installer di browser.
           </p>
           <p>
             Simpan informasi database dan login admin yang ditampilkan setelah instalasi selesai.

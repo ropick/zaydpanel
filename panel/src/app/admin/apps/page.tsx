@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import { api, type SiteInfo } from "@/lib/api";
+import { api, type SiteInfo, type SiteApps } from "@/lib/api";
 import {
   Download, Globe, Loader2, CheckCircle2, XCircle,
-  ChevronRight, ArrowLeft, ExternalLink, Search
+  ChevronRight, ArrowLeft, ExternalLink, Search, Trash2,
+  Package, RefreshCw, Calendar
 } from "lucide-react";
 import Link from "next/link";
 
@@ -22,9 +23,11 @@ interface InstallResult {
 export default function AppInstallerPage() {
   const [apps, setApps] = useState<AppInfo[]>([]);
   const [sites, setSites] = useState<SiteInfo[]>([]);
+  const [installed, setInstalled] = useState<SiteApps[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
+  const [removing, setRemoving] = useState<string | null>(null);
 
   // Install state
   const [selectedApp, setSelectedApp] = useState<AppInfo | null>(null);
@@ -33,13 +36,39 @@ export default function AppInstallerPage() {
   const [installing, setInstalling] = useState(false);
   const [installResult, setInstallResult] = useState<InstallResult | null>(null);
 
+  const loadInstalled = () => {
+    api.appStatus().then(res => { if (res.success) setInstalled(res.data || []); });
+  };
+
   useEffect(() => {
-    Promise.all([api.listApps(), api.listSites()]).then(([appsRes, sitesRes]) => {
+    Promise.all([api.listApps(), api.listSites(), api.appStatus()]).then(([appsRes, sitesRes, statusRes]) => {
       if (appsRes.success) setApps(appsRes.data || []);
       if (sitesRes.success) setSites(sitesRes.data || []);
+      if (statusRes.success) setInstalled(statusRes.data || []);
       setLoading(false);
     });
   }, []);
+
+  const refreshAll = () => {
+    setLoading(true);
+    Promise.all([api.listSites(), api.appStatus()]).then(([sitesRes, statusRes]) => {
+      if (sitesRes.success) setSites(sitesRes.data || []);
+      if (statusRes.success) setInstalled(statusRes.data || []);
+      setLoading(false);
+    });
+  };
+
+  const handleRemoveApp = async (domain: string, appId: string, appName: string) => {
+    if (!confirm(`Hapus ${appName} dari ${domain}? File aplikasi akan dihapus.`)) return;
+    setRemoving(`${domain}/${appId}`);
+    const res = await api.removeApp(domain, appId, false);
+    setRemoving(null);
+    if (res.success) {
+      loadInstalled();
+    } else {
+      alert(res.error || "Gagal menghapus aplikasi");
+    }
+  };
 
   const categories = ["All", ...Array.from(new Set(apps.map(a => a.category)))];
   const filtered = apps.filter(a => {
@@ -88,6 +117,7 @@ export default function AppInstallerPage() {
       database: res.success ? (res.data as any)?.database : undefined,
     });
     setInstalling(false);
+    if (res.success) loadInstalled();
   };
 
   if (loading) return <div className="animate-pulse text-surface-500">Loading...</div>;
@@ -231,6 +261,61 @@ export default function AppInstallerPage() {
         <Link href="/admin/sites" className="btn-secondary text-xs">
           <Globe size={14} /> Kelola Website
         </Link>
+      </div>
+
+      {/* Installed Apps status */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+            <Package size={16} className="text-brand-400" /> Status Instalasi Aplikasi
+            <span className="text-xs text-surface-500 font-normal">
+              ({installed.reduce((n, s) => n + s.apps.length, 0)} terpasang)
+            </span>
+          </h2>
+          <button onClick={refreshAll} className="btn-ghost text-xs" disabled={loading}>
+            <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Refresh
+          </button>
+        </div>
+        {installed.filter(s => s.apps.length > 0).length === 0 ? (
+          <p className="text-surface-500 text-sm py-2">Belum ada aplikasi yang terinstall.</p>
+        ) : (
+          <div className="space-y-3">
+            {installed.filter(s => s.apps.length > 0).map(site => (
+              <div key={site.domain} className="bg-surface-800/60 rounded-lg p-3">
+                <p className="text-sm font-medium text-white flex items-center gap-2 mb-2">
+                  <Globe size={14} className="text-surface-400" /> {site.domain}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {site.apps.map(app => (
+                    <div key={app.app_id} className="flex items-center gap-2 bg-surface-900 rounded-lg px-3 py-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white font-medium truncate">{app.app_name} {app.version && <span className="text-xs text-surface-500">v{app.version}</span>}</p>
+                        <p className="text-xs text-surface-400 flex items-center gap-1">
+                          <Calendar size={10} />
+                          {app.installed_at ? app.installed_at.replace("T", " ").slice(0, 16) : "—"}
+                          {app.needs_web_setup && <span className="text-yellow-400 ml-1">(butuh setup web)</span>}
+                        </p>
+                      </div>
+                      {app.admin_url && (
+                        <a href={app.admin_url} target="_blank" rel="noopener noreferrer" className="text-brand-400 hover:text-brand-300" title={app.admin_url}>
+                          <ExternalLink size={14} />
+                        </a>
+                      )}
+                      <button
+                        onClick={() => handleRemoveApp(site.domain, app.app_id, app.app_name)}
+                        disabled={removing === `${site.domain}/${app.app_id}`}
+                        className="text-red-400 hover:text-red-300 disabled:opacity-50"
+                        title={`Hapus ${app.app_name}`}
+                      >
+                        {removing === `${site.domain}/${app.app_id}` ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Search & Filter */}

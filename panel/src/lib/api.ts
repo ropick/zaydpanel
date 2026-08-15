@@ -88,6 +88,22 @@ export interface SystemSetting {
   key: string; value: string; description: string;
 }
 
+export interface AppInfo {
+  id: string; name: string; version: string; icon: string; color: string;
+  description: string; category: string; website: string;
+  fields: { key: string; label: string; type: string; default: string; required: boolean }[];
+}
+
+export interface InstalledApp {
+  app_id: string; app_name: string; version: string; status: string;
+  installed_at: string; admin_url: string; admin_user: string;
+  admin_email: string; needs_web_setup: boolean;
+}
+
+export interface SiteApps {
+  domain: string; home: string; exists: boolean; type?: string; apps: InstalledApp[];
+}
+
 export interface FileItem {
   name: string; path: string; type: "file" | "dir"; size: number; modified: string;
   permissions?: string;
@@ -221,9 +237,12 @@ export const api = {
     agentFetch("/ftp/delete", { method: "POST", body: JSON.stringify({ id }) }),
 
   // App Installer (Softaculous-like)
-  listApps: () => agentFetch<any[]>("/apps"),
+  listApps: () => agentFetch<AppInfo[]>("/apps"),
   installApp: (domain: string, appType: string, fields?: Record<string, string>) =>
     agentFetch("/app/install", { method: "POST", body: JSON.stringify({ domain, app_type: appType, ...fields }) }),
+  appStatus: () => agentFetch<SiteApps[]>("/apps/status"),
+  removeApp: (domain: string, appId: string, dropDatabase: boolean = true) =>
+    agentFetch("/app/remove", { method: "POST", body: JSON.stringify({ domain, app_id: appId, drop_database: dropDatabase }) }),
 
   // Statistics
   getStatistics: () => agentFetch<any[]>("/statistics"),

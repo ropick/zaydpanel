@@ -1279,9 +1279,11 @@ def handle_server_info(handler):
 
 
 def handle_list_sites(handler):
-    """List sites. Admin sees all, customer sees own."""
+    """List sites. Admin sees all, customer sees own. Requires auth."""
     user = _get_request_user(handler)
-    if user and user.get("role") != "admin":
+    if not user:
+        return _error(handler, "Unauthorized", 401)
+    if user.get("role") != "admin":
         sites = _get_user_sites(user["id"])
     else:
         sites = _get_sites()
@@ -1375,12 +1377,12 @@ ZaydPanel
         try_files $uri $uri/ =404;
     }
     location ~ \\.php$ {
-        fastcgi_pass unix:/run/php-fpm/www.sock;
+        fastcgi_pass unix:/run/php-fpm/%s.sock;
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
     }
-}""" % (domain, domain, home, domain, domain)
+}""" % (domain, domain, home, domain, domain, domain)
     with open(nginx_conf, "w") as f:
         f.write(nginx_tmpl)
     pool_conf = """[%s]
@@ -1704,6 +1706,9 @@ def handle_remove_wordpress(handler, data):
 
 
 def handle_processes(handler):
+    user = _get_request_user(handler)
+    if not user or user.get("role") != "admin":
+        return _error(handler, "Admin only", 403)
     try:
         out = _run("ps aux --sort=-%%cpu | head -21")[0]
         lines = out.strip().split("\n")[1:]
@@ -2382,18 +2387,18 @@ class AgentHandler(http.server.BaseHTTPRequestHandler):
             if path.startswith("/rename/"):
                 return handle_rename_file(self, data)
             if path.startswith("/auth/users/"):
-                parts = path[11:].split("/")
+                parts = path[12:].split("/")
                 if len(parts) >= 1:
                     user_id = parts[0]
                     if path.endswith("/reset"):
                         return handle_reset_password(self, {**data, "id": int(user_id)})
                     return handle_update_user(self, {**data, "id": int(user_id)})
             if path.startswith("/auth/packages/"):
-                parts = path[14:].split("/")
+                parts = path[15:].split("/")
                 pkg_id = parts[0]
                 return handle_update_package(self, {**data, "id": int(pkg_id)})
             if path.startswith("/email/"):
-                email_id = path[6:]
+                email_id = path[7:]
                 return handle_delete_email(self, {**data, "id": int(email_id)})
             if path.startswith("/ftp/"):
                 ftp_id = path[5:]
@@ -2407,11 +2412,11 @@ class AgentHandler(http.server.BaseHTTPRequestHandler):
         data = _read_body(self)
         try:
             if path.startswith("/auth/users/"):
-                parts = path[11:].split("/")
+                parts = path[12:].split("/")
                 user_id = parts[0]
                 return handle_update_user(self, {**data, "id": int(user_id)})
             if path.startswith("/auth/packages/"):
-                parts = path[14:].split("/")
+                parts = path[15:].split("/")
                 pkg_id = parts[0]
                 return handle_update_package(self, {**data, "id": int(pkg_id)})
             _error(self, "Not found", 404)
@@ -2423,11 +2428,11 @@ class AgentHandler(http.server.BaseHTTPRequestHandler):
         data = _read_body(self) or {}
         try:
             if path.startswith("/auth/users/"):
-                parts = path[11:].split("/")
+                parts = path[12:].split("/")
                 user_id = parts[0]
                 return handle_delete_user(self, {**data, "id": int(user_id)})
             if path.startswith("/auth/packages/"):
-                parts = path[14:].split("/")
+                parts = path[15:].split("/")
                 pkg_id = parts[0]
                 return handle_delete_package(self, {**data, "id": int(pkg_id)})
             _error(self, "Not found", 404)
